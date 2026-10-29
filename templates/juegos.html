@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#07090c">
+    <meta name="description" content="Juega, practica y mejora tu tenis con los minijuegos de TENNISSEL.">
+    <title>{% if standalone_game %}Tennis Arena | TENNISSEL{% else %}Juegos | TENNISSEL{% endif %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .arena-game {
+            --arena-blue: #0785f9;
+            --arena-deep: #071a30;
+            margin: clamp(24px, 4vw, 48px) 0;
+            overflow: hidden;
+            border: 1px solid rgba(105, 183, 255, .26);
+            border-radius: 22px;
+            background: linear-gradient(145deg, #0d2038, #081321 72%);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, .35), inset 0 1px rgba(255, 255, 255, .05);
+        }
+        .arena-game-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 20px clamp(16px, 3vw, 30px);
+        }
+        .arena-game-head h2 { margin: 5px 0 3px; color: #f5f9ff; font: 800 clamp(1.25rem, 3vw, 1.8rem)/1.1 'Outfit', sans-serif; }
+        .arena-game-head p { margin: 0; color: #a7bad1; font-size: .82rem; line-height: 1.5; }
+        .arena-game-kicker { color: #83bfff; font-size: .62rem; font-weight: 800; letter-spacing: .16em; }
+        .arena-game-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .arena-game-actions button, .arena-hit-button {
+            min-height: 43px;
+            padding: 0 15px;
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 9px;
+            color: #eff7ff;
+            background: #142a43;
+            font: 800 .72rem/1 'Montserrat', sans-serif;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .arena-game-actions button:hover, .arena-game-actions button:focus-visible { border-color: #61b4ff; background: #1b3859; }
+        .arena-game-actions .arena-start { border-color: #158cff; color: #fff; background: #0876ed; box-shadow: 0 5px 20px #0876ed40; }
+        .arena-game-stage { position: relative; margin: 0 14px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .2); border-radius: 15px; background: #15552e; }
+        .arena-game-canvas { display: block; width: 100%; aspect-ratio: 5 / 3; touch-action: none; }
+        .arena-game-score {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            display: grid;
+            grid-template-columns: minmax(76px, 1fr) repeat(3, minmax(33px, auto)) minmax(76px, 1fr);
+            align-items: center;
+            gap: 7px;
+            min-width: min(390px, calc(100% - 28px));
+            padding: 8px 11px;
+            border: 1px solid rgba(143, 198, 255, .25);
+            border-radius: 12px;
+            color: #fff;
+            background: rgba(5, 23, 44, .91);
+            box-shadow: 0 8px 24px #00101e55;
+            pointer-events: none;
+        }
+        .arena-score-player { display: flex; align-items: center; gap: 8px; font-size: .67rem; font-weight: 800; }
+        .arena-score-player span { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; background: #138bff; box-shadow: 0 0 12px #138bff90; }
+        .arena-score-player.arena-score-ai span { background: #ff4548; box-shadow: 0 0 12px #ff454890; }
+        .arena-score-player small { padding:2px 4px; border-radius:4px; color:#08203a; background:#eaff4d; font-size:.45rem; }
+        .arena-score-cell { min-width: 35px; text-align: center; }
+        .arena-score-cell small { display: block; color: #9eb4cc; font-size: .48rem; font-weight: 800; letter-spacing: .08em; }
+        .arena-score-cell strong { display: block; color: #83c6ff; font: 800 .94rem/1.2 'Outfit', sans-serif; }
+        .arena-game-status {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            max-width: 42%;
+            padding: 7px 10px;
+            border: 1px solid #ffffff24;
+            border-radius: 99px;
+            color: #e7f1ff;
+            background: #071a30d9;
+            font-size: .63rem;
+            font-weight: 800;
+            text-align: center;
+        }
+        .arena-game-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px 16px; }
+        .arena-control-hint { color: #a8bbd2; font-size: .7rem; line-height: 1.6; }
+        .arena-control-hint kbd { padding: 2px 5px; border: 1px solid #ffffff20; border-radius: 4px; color: #eaf3ff; background: #ffffff0c; font: 700 .66rem/1.3 monospace; }
+        .arena-touch-controls { display: none; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+        .arena-joystick { position: relative; width: 112px; height: 92px; flex: 0 0 112px; touch-action: none; }
+        .arena-joystick-base { position: absolute; inset: 5px 10px; border: 1px solid #ffffff33; border-radius: 50%; background: #ffffff10; }
+        .arena-joystick-knob { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border: 1px solid #ffffff55; border-radius: 50%; background: #168bffdd; box-shadow: 0 3px 12px #00152b88; transform: translate(-50%, -50%); }
+        .arena-hit-button { min-width: 135px; min-height: 55px; border: 0; border-radius: 14px; color: #092038; background: #eaff4d; box-shadow: 0 5px 20px #eaff4d35; font-size: .83rem; }
+        .arena-hit-button:active { transform: scale(.97); }
+        .arena-nav { display:flex; flex-wrap:wrap; gap:7px; padding:0 clamp(12px,2vw,24px) 14px; }
+        .arena-nav button,.arena-panel button,.arena-panel select,.arena-panel input { min-height:40px; padding:0 13px; border:1px solid #ffffff1b; border-radius:9px; color:#eaf4ff; background:#0b1c31; font:700 .72rem/1.2 'Montserrat',sans-serif; }
+        .arena-nav button { display:flex; align-items:center; gap:8px; cursor:pointer; transition:.18s ease; }
+        .arena-nav button:hover,.arena-nav button[aria-current="page"] { border-color:#168bff; color:#fff; background:#0b3a68; box-shadow:0 0 18px #0785f933; }
+        .arena-nav .arena-brand { margin-right:auto; border:0; color:#fff; background:transparent; font:900 1.05rem/1 'Outfit',sans-serif; letter-spacing:.03em; }
+        .arena-brand span { color:#20a4ff; }
+        .arena-panel { display:none; margin:0 clamp(12px,2vw,24px) 14px; padding:16px; border:1px solid #168bff3a; border-radius:14px; background:linear-gradient(140deg,#07172bd9,#0b2038f2); }
+        .arena-panel.is-active { display:block; animation:arena-panel-in .2s ease-out; }
+        .arena-panel[hidden] { display:none; }
+        @keyframes arena-panel-in { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+        .arena-panel h3 { margin:0 0 5px; color:#f5f9ff; font:800 1rem/1.3 'Outfit',sans-serif; }
+        .arena-panel p { margin:0 0 12px; color:#a7bad1; font-size:.75rem; line-height:1.55; }
+        .arena-mode-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+        .arena-panel .arena-mode-card { display:grid; min-height:74px; gap:4px; justify-items:start; padding:12px; text-align:left; cursor:pointer; }
+        .arena-panel .arena-mode-card[aria-pressed="true"] { border-color:#168bff; background:#0b3a68; box-shadow:inset 0 0 0 1px #168bff55; }
+        .arena-mode-card strong { color:#f2f7ff; font-size:.74rem; }
+        .arena-mode-card small,.arena-field small { color:#93acc5; font-size:.63rem; }
+        .arena-panel-row { display:flex; flex-wrap:wrap; align-items:end; gap:10px; margin-top:12px; }
+        .arena-field { display:grid; gap:6px; color:#bfd1e5; font-size:.68rem; font-weight:700; }
+        .arena-panel select,.arena-panel input { min-width:150px; }
+        .arena-panel .arena-panel-primary { border-color:#168bff; color:#fff; background:#0876ed; box-shadow:0 5px 20px #0876ed40; cursor:pointer; }
+        .arena-panel button { cursor:pointer; }
+        .arena-panel button:hover { border-color:#61b4ff; background:#153b5c; }
+        .arena-panel .arena-panel-primary:hover { background:#168bff; }
+        .arena-panel [role="status"] { min-height:1.3em; margin:10px 0 0; color:#8fc9ff; }
+        .arena-panel-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
+        .arena-panel-stats > div { padding:11px; border:1px solid #ffffff14; border-radius:9px; background:#ffffff08; }
+        .arena-panel-stats strong { display:block; color:#fff; font:800 1.05rem/1.2 'Outfit',sans-serif; }
+        .arena-panel-stats span { color:#91a9c2; font-size:.61rem; }
+        .arena-history { display:grid; gap:6px; margin:12px 0 0; padding:0; list-style:none; }
+        .arena-history li { display:flex; justify-content:space-between; gap:12px; padding:8px 10px; border-radius:7px; color:#bcd0e4; background:#ffffff08; font-size:.68rem; }
+        .arena-game-stage { perspective:1000px; box-shadow:0 16px 40px #00101e55; }
+        .arena-result-overlay { position:absolute; z-index:3; inset:50% auto auto 50%; width:min(440px,calc(100% - 24px)); padding:25px; border:1px solid #168bff; border-radius:18px; color:#f4f9ff; background:linear-gradient(145deg,#06162cf2,#0b2947f5); box-shadow:0 18px 60px #000b,0 0 35px #0785f933; text-align:center; transform:translate(-50%,-50%); }
+        .arena-result-overlay[hidden] { display:none; }
+        .arena-result-overlay h3 { margin:0 0 6px; color:#72c7ff; font:900 clamp(1.7rem,5vw,2.4rem)/1.1 'Outfit',sans-serif; }
+        .arena-result-overlay p { margin:6px 0 14px; color:#bfd0e1; font-size:.78rem; }
+        .arena-result-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+        .arena-game-controls { flex-wrap:wrap; }
+        .arena-touch-extra { display:flex; gap:8px; }
+        .arena-touch-extra .arena-hit-button { min-width:72px; min-height:45px; font-size:.68rem; }
+        .arena-connection { display:inline-flex; align-items:center; gap:7px; color:#9fb3c9; font-size:.66rem; }
+        .arena-connection::before { width:7px; height:7px; border-radius:50%; background:#718092; content:''; }
+        .arena-connection.is-connected::before { background:#50e28a; box-shadow:0 0 10px #50e28a; }
+        .arena-connection.is-waiting::before { background:#ffd166; box-shadow:0 0 10px #ffd166; }
+        .arena-game-message { min-height: 1.3em; margin: 0; padding: 0 18px 12px; color: #a9bfd9; font-size: .72rem; }
+        .arena-game-message[hidden] { display: none; }
+        .arena-advanced-link { display: block; padding: 0 18px 17px; color: #83bfff !important; font-size: .7rem; font-weight: 700; text-decoration: none; }
+        .arena-advanced-link:hover, .arena-advanced-link:focus-visible { color: #c0e1ff !important; text-decoration: underline; }
+        .reward-challenges { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:10px; margin-top:14px; }
+        .reward-challenge { padding:12px; border:1px solid #24415b; border-radius:10px; background:#0b1a2a; }
+        .reward-challenge strong { display:block; color:#eaf4ff; font-size:.78rem; }
+        .reward-challenge p { margin:6px 0; color:#a8bdd2; font-size:.7rem; }
+        .reward-challenge small { display:block; margin-top:5px; color:#93acc5; font-size:.65rem; line-height:1.5; }
+        .reward-challenge progress { display:block; width:100%; height:7px; margin:9px 0 4px; accent-color:#59c47c; }
+        .reward-challenge button { min-height:34px; padding:6px 10px; border:1px solid #3c9cf5; border-radius:7px; color:#fff; background:#123e65; font:700 .68rem 'Montserrat',sans-serif; cursor:pointer; }
+        .reward-challenge button:disabled { opacity:.55; cursor:not-allowed; }
+        .reward-history { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:12px; margin-top:16px; }
+        .reward-history section { min-width:0; padding:12px; border:1px solid #24415b; border-radius:10px; background:#091827; }
+        .reward-history h3 { margin:0 0 8px; color:#eaf4ff; font:800 .78rem/1.3 'Montserrat',sans-serif; }
+        .reward-history ul { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+        .reward-history li { overflow-wrap:anywhere; color:#a8bdd2; font-size:.67rem; line-height:1.5; }
+        .reward-coupon-code { color:#baff74; font-weight:800; }
+        @media (pointer: coarse), (max-width: 700px) {
+            .arena-nav { gap:5px; padding-bottom:10px; }
+            .arena-nav button { min-height:38px; padding:0 9px; font-size:.63rem; }
+            .arena-nav .arena-brand { width:100%; justify-content:center; }
+            .arena-mode-grid { grid-template-columns:1fr; }
+            .arena-panel { padding:12px; }
+            .arena-panel-row { align-items:stretch; }
+            .arena-field { flex:1 1 130px; }
+            .arena-field select,.arena-field input { width:100%; min-width:0; }
+            .arena-panel-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .arena-game-head { align-items: flex-start; flex-direction: column; padding: 17px 16px; }
+            .arena-game-actions { width: 100%; }
+            .arena-game-actions button { flex: 1; }
+            .arena-game-stage { margin: 0 7px; border-radius: 10px; }
+            .arena-game-canvas { aspect-ratio: 4 / 3; }
+            .arena-game-score { top: 7px; left: 7px; grid-template-columns: minmax(47px,1fr) repeat(3,minmax(25px,auto)) minmax(47px,1fr); gap: 3px; min-width: min(305px, calc(100% - 14px)); padding: 6px; border-radius: 8px; }
+            .arena-score-player { gap: 3px; font-size: .5rem; }
+            .arena-score-player span { width: 8px; height: 8px; flex-basis: 8px; }
+            .arena-score-cell { min-width: 25px; }
+            .arena-score-cell strong { font-size: .75rem; }
+            .arena-score-cell small { font-size: .4rem; }
+            .arena-game-status { top: auto; right: 7px; bottom: 7px; max-width: 53%; padding: 5px 7px; font-size: .53rem; }
+            .arena-game-controls { padding: 8px 12px 12px; }
+            .arena-touch-controls { display: flex; }
+            .arena-touch-extra { display:flex; }
+            .arena-control-hint { display: none; }
+            .arena-game-message { padding: 0 12px 10px; }
+        }
+        @media (max-width: 390px) {
+            .arena-nav button { flex:1 1 auto; }
+            .arena-game-actions button { padding: 0 8px; font-size: .63rem; }
+            .arena-game-score { min-width: calc(100% - 14px); }
+            .arena-joystick { width: 96px; flex-basis: 96px; }
+            .arena-hit-button { min-width: 115px; }
+        }
+    </style>
+</head>
+<body>
+{% include 'navbar.html' %}
+<main class="games-page">
+    <div class="games-shell">
+        {% if not standalone_game %}
+        <section class="games-hero" aria-labelledby="gamesHeroTitle">
+            <div class="games-hero-copy">
+                <span class="games-eyebrow"><span class="eyebrow-pulse" aria-hidden="true"></span> ZONA INTERACTIVA · TENNISSEL</span>
+                <h1 id="gamesHeroTitle">Juega, practica y <span>mejora</span> tu tenis</h1>
+                <p>Entra a la cancha, reta tus reflejos y mejora cada punto. Una experiencia de tenis hecha para disfrutarla desde cualquier dispositivo.</p>
+                <a class="games-button games-button-primary" href="{{ url_for('juego') }}">
+                    <span>Explorar Tennis Arena</span><span class="button-arrow" aria-hidden="true">↗</span>
+                </a>
+                <div class="hero-caption"><span aria-hidden="true"></span> TU PRÓXIMO PARTIDO EMPIEZA AQUÍ</div>
+            </div>
+
+            <div class="games-hero-scene" aria-hidden="true">
+                <div class="scene-glow"></div>
+                <span class="scene-particle particle-one"></span>
+                <span class="scene-particle particle-two"></span>
+                <span class="scene-particle particle-three"></span>
+                <span class="scene-particle particle-four"></span>
+                <div class="hero-court"></div>
+                <div class="hero-platform"><span></span></div>
+                <div class="hero-racket">
+                    <span class="racket-head"><span class="racket-strings"></span></span>
+                    <span class="racket-throat"></span>
+                    <span class="racket-shaft"></span>
+                    <span class="racket-grip"></span>
+                </div>
+                <div class="hero-tennis-ball"><span></span></div>
+                <div class="scene-reflection"></div>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if standalone_game %}
+        <section class="arena-game games-reveal" id="tennis-arena-game" aria-labelledby="arenaGameTitle"
+                 data-online-create-url="{{ url_for('api_arena_online_create') }}"
+                 data-online-join-url="{{ url_for('api_arena_online_join') }}"
+                 data-online-poll-url="{{ url_for('api_arena_online_poll') }}"
+                 data-online-state-url="{{ url_for('api_arena_online_state') }}"
+                 data-online-leave-url="{{ url_for('api_arena_online_leave') }}">
+            <header class="arena-game-head">
+                <div>
+                    <span class="arena-game-kicker">TENNISSEL · COMPITE · MEJORA</span>
+                    <h2 id="arenaGameTitle">TENNIS <span style="color:#20a4ff">ARENA</span></h2>
+                    <p>Elige tu desafío, domina la cancha y juega cada punto.</p>
+                </div>
+                <div class="arena-game-actions" aria-label="Controles de partida">
+                    <button class="arena-start" id="arenaStartButton" type="button">▶ Iniciar partida</button>
+                    <button id="arenaPauseButton" type="button" disabled>Ⅱ Pausar</button>
+                    <button id="arenaResetButton" type="button">↻ Reiniciar</button>
+                </div>
+            </header>
+            <nav class="arena-nav" aria-label="Menú Tennis Arena">
+                <button class="arena-brand" type="button" data-arena-tab="play">🎾 TENNIS <span>ARENA</span></button>
+                <button type="button" data-arena-tab="play" aria-current="page">▶ Jugar</button>
+                <button type="button" data-arena-tab="modes">◈ Modos</button>
+                <button type="button" data-arena-tab="online">◎ Online</button>
+                <button type="button" data-arena-tab="tournament">♜ Torneos</button>
+                <button type="button" data-arena-tab="stats">▤ Estadísticas</button>
+                <button type="button" data-arena-tab="settings">⚙ Ajustes</button>
+                <button type="button" data-arena-tab="profile">♙ Perfil</button>
+                <span class="arena-connection" id="arenaConnectionStatus">Sin conexión online</span>
+            </nav>
+            <section class="arena-panel is-active" data-arena-panel="play" aria-label="Preparar partido">
+                <h3>Tu próxima partida</h3>
+                <p id="arenaModeDescription">Juega un partido completo contra una rival de inteligencia artificial.</p>
+                <div class="arena-panel-row">
+                    <label class="arena-field">Dificultad
+                        <select id="arenaDifficulty">
+                            <option value="easy">Fácil</option><option value="normal" selected>Normal</option>
+                            <option value="hard">Difícil</option><option value="expert">Experto</option>
+                        </select>
+                    </label>
+                    <label class="arena-field">Formato
+                        <select id="arenaMatchFormat">
+                            <option value="one">Un set</option><option value="three" selected>Mejor de tres sets</option>
+                        </select>
+                    </label>
+                    <button class="arena-panel-primary" id="arenaApplySettings" type="button">Aplicar partido</button>
+                    <button type="button" data-arena-back>Volver al menú</button>
+                </div>
+            </section>
+            <section class="arena-panel" data-arena-panel="modes" aria-label="Modos de juego" hidden>
+                <h3>Selecciona un modo</h3>
+                <p>El partido mantiene las reglas de puntuación de tenis. Los puntos se ganan en los intercambios.</p>
+                <div class="arena-mode-grid">
+                    <button class="arena-mode-card" type="button" data-arena-mode="solo" aria-pressed="true"><strong>🤖 1 vs IA</strong><small>Compite contra la CPU.</small></button>
+                    <button class="arena-mode-card" type="button" data-arena-mode="local"><strong>👥 2 jugadores local</strong><small>Jugador 1 WASD + espacio; jugador 2 flechas + Enter.</small></button>
+                    <button class="arena-mode-card" type="button" data-arena-mode="training"><strong>🎯 Entrenamiento</strong><small>Practica golpes, movimiento y devoluciones.</small></button>
+                </div>
+                <div class="arena-panel-row"><button class="arena-panel-primary" id="arenaModeStart" type="button">Iniciar modo seleccionado</button><button type="button" data-arena-back>Volver al menú</button></div>
+            </section>
+            <section class="arena-panel" data-arena-panel="online" aria-label="Multijugador online" hidden>
+                <h3>Multijugador online</h3>
+                <p>Crea una sala real y comparte el código con otra persona. Ambos dispositivos deben acceder a este mismo servidor.</p>
+                <div class="arena-panel-row">
+                    <button class="arena-panel-primary" id="arenaCreateRoom" type="button">Crear sala</button>
+                    <label class="arena-field">Código de sala<input id="arenaRoomCode" maxlength="6" autocomplete="off" placeholder="ABC123" aria-label="Código de sala"></label>
+                    <button id="arenaJoinRoom" type="button">Unirse</button>
+                    <button id="arenaLeaveRoom" type="button" hidden>Salir de la sala</button>
+                </div>
+                <p id="arenaOnlineMessage" role="status" aria-live="polite">La conexión se establece con jugadores reales; aquí no se muestran rivales ficticios.</p>
+                <div class="arena-panel-row"><button type="button" data-arena-back>Volver al menú</button></div>
+            </section>
+            <section class="arena-panel" data-arena-panel="tournament" aria-label="Torneos" hidden>
+                <h3>Bracket de torneo</h3>
+                <p>Compite en tres rondas contra rivales de IA. Cada ronda es un partido de un set; gana para avanzar.</p>
+                <div class="arena-panel-row">
+                    <button class="arena-panel-primary" id="arenaTournamentStart" type="button">Inscribirme / continuar</button>
+                    <span id="arenaTournamentStatus" role="status">Torneo sin iniciar</span>
+                    <button type="button" data-arena-back>Volver al menú</button>
+                </div>
+            </section>
+            <section class="arena-panel" data-arena-panel="stats" aria-label="Estadísticas" hidden>
+                <h3>Tu temporada</h3>
+                <div class="arena-panel-stats">
+                    <div><strong id="arenaStatMatches">0</strong><span>PARTIDOS</span></div>
+                    <div><strong id="arenaStatWins">0</strong><span>VICTORIAS</span></div>
+                    <div><strong id="arenaStatWinRate">0%</strong><span>EFECTIVIDAD</span></div>
+                    <div><strong id="arenaStatLevel">1</strong><span>NIVEL</span></div>
+                    <div><strong id="arenaStatGames">0</strong><span>JUEGOS GANADOS</span></div>
+                    <div><strong id="arenaStatSets">0</strong><span>SETS GANADOS</span></div>
+                    <div><strong id="arenaStatExperience">0 XP</strong><span>EXPERIENCIA</span></div>
+                </div>
+                <ul class="arena-history" id="arenaMatchHistory" aria-label="Historial de partidos"></ul>
+                <div class="arena-panel-row"><button type="button" data-arena-back>Volver al menú</button></div>
+            </section>
+            <section class="arena-panel" data-arena-panel="settings" aria-label="Configuración" hidden>
+                <h3>Configuración</h3>
+                <div class="arena-panel-row">
+                    <label class="arena-field">Volumen de efectos <input id="arenaVolume" type="range" min="0" max="100" value="35"></label>
+                    <label class="arena-field">Música
+                        <select id="arenaMusic"><option value="off">Desactivada</option><option value="on">Activada</option></select>
+                    </label>
+                    <label class="arena-field">Calidad gráfica
+                        <select id="arenaQuality"><option value="high">Alta</option><option value="balanced">Equilibrada</option><option value="low">Básica</option></select>
+                    </label>
+                    <button id="arenaResetPreferences" type="button">Restaurar preferencias</button>
+                    <button type="button" data-arena-back>Volver al menú</button>
+                </div>
+            </section>
+            <section class="arena-panel" data-arena-panel="profile" aria-label="Perfil de jugador" hidden>
+                <h3>Perfil del jugador</h3>
+                <p>Tu perfil y tus estadísticas de juego se guardan en este dispositivo.</p>
+                <div class="arena-panel-row">
+                    <label class="arena-field">Nombre en la cancha<input id="arenaPlayerName" maxlength="18" autocomplete="nickname" value="Jugador"></label>
+                    <span id="arenaProfileLevel">Nivel 1 · 0 XP</span>
+                    <button class="arena-panel-primary" id="arenaSaveProfile" type="button">Guardar perfil</button>
+                    <button type="button" data-arena-back>Volver al menú</button>
+                </div>
+            </section>
+            <div class="arena-game-stage">
+                <canvas class="arena-game-canvas" id="arenaGameCanvas" tabindex="0" aria-label="Cancha de tenis azul con tu jugador en la mitad izquierda y la rival de inteligencia artificial en la mitad derecha"></canvas>
+                <div class="arena-game-score" aria-label="Marcador">
+                    <div class="arena-score-player"><span aria-hidden="true"></span><strong id="arenaPlayerScoreName">TÚ</strong><small id="arenaPlayerServe" aria-label="Turno de saque" hidden>SAQUE</small></div>
+                    <div class="arena-score-cell"><small>SETS</small><strong id="arenaSets">0–0</strong></div>
+                    <div class="arena-score-cell"><small>JUEGOS</small><strong id="arenaGames">0–0</strong></div>
+                    <div class="arena-score-cell"><small>PUNTOS</small><strong id="arenaPoints">0–0</strong></div>
+                    <div class="arena-score-player arena-score-ai"><span aria-hidden="true"></span><strong id="arenaRivalScoreName">RIVAL IA</strong><small id="arenaRivalServe" aria-label="Turno de saque" hidden>SAQUE</small></div>
+                </div>
+                <div class="arena-game-status" id="arenaGameStatus" aria-live="polite">Pulsa Iniciar para jugar</div>
+                <section class="arena-result-overlay" id="arenaResultOverlay" aria-live="polite" hidden>
+                    <h3 id="arenaResultTitle">¡VICTORIA!</h3>
+                    <p id="arenaResultDetails"></p>
+                    <div class="arena-result-actions">
+                        <button class="arena-panel-primary" id="arenaPlayAgain" type="button">↻ Jugar otra vez</button>
+                        <button id="arenaResultMenu" type="button">⌂ Volver al menú</button>
+                    </div>
+                </section>
+            </div>
+            <div class="arena-game-controls">
+                <div class="arena-control-hint">
+                    Mover: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o flechas ·
+                    Golpear/sacar: <kbd>ESPACIO</kbd> · Ratón: mover y clic para golpear
+                </div>
+                <div class="arena-touch-controls">
+                    <div class="arena-joystick" id="arenaJoystick" role="application" aria-label="Joystick virtual: arrastra para mover al jugador">
+                        <div class="arena-joystick-base"></div>
+                        <div class="arena-joystick-knob" id="arenaJoystickKnob"></div>
+                    </div>
+                    <div class="arena-touch-extra">
+                        <button class="arena-hit-button" id="arenaTouchRun" type="button">🏃 CORRER</button>
+                        <button class="arena-hit-button" id="arenaTouchHit" type="button">🎾 GOLPEAR</button>
+                    </div>
+                </div>
+            </div>
+            <p class="arena-game-message" id="arenaGameMessage" role="status" aria-live="polite"></p>
+            <a class="arena-advanced-link" href="{{ url_for('juegos') }}">Volver al catálogo de juegos ↗</a>
+        </section>
+        {% endif %}
+
+        {% if not standalone_game %}
+        <section class="games-section" aria-labelledby="gamesListTitle">
+            <div class="games-section-head">
+                <div>
+                    <span class="section-kicker">ELIGE TU DESAFÍO</span>
+                    <h2 id="gamesListTitle">La cancha es tuya</h2>
+                    <p>Minijuegos diseñados para poner a prueba tu instinto y tus reflejos.</p>
+                </div>
+                <span class="games-status"><span aria-hidden="true"></span> 1 JUEGO ACTIVO</span>
+            </div>
+
+            <div class="games-grid">
+                <article class="game-card arena-card tilt-card games-reveal">
+                    <div class="arena-card-content">
+                        <span class="card-tag"><span aria-hidden="true"></span> DISPONIBLE AHORA</span>
+                        <p class="card-overline">EL PARTIDO TE ESPERA</p>
+                        <h3>Tennis Arena</h3>
+                        <p class="arena-description">Enfréntate a la IA, controla a tu jugador y devuelve cada golpe en un partido rápido.</p>
+                        <a class="games-button games-button-primary" href="{{ url_for('juego') }}">
+                            <span>Jugar ahora</span><span class="button-arrow" aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                    <div class="arena-scene" aria-hidden="true">
+                        <div class="arena-court"></div>
+                        <div class="arena-racket">
+                            <span class="arena-racket-head"></span>
+                            <span class="arena-racket-handle"></span>
+                        </div>
+                        <div class="arena-ball"></div>
+                        <span class="arena-light"></span>
+                    </div>
+                </article>
+
+                <article class="game-card precision-card tilt-card games-reveal">
+                    <div class="precision-art" aria-hidden="true">
+                        <div class="target-rings"><span></span><span></span><span></span><span></span></div>
+                        <div class="target-ball"></div>
+                        <span class="target-beam"></span>
+                    </div>
+                    <div class="precision-copy">
+                        <span class="coming-label"><span aria-hidden="true"></span> PRÓXIMAMENTE</span>
+                        <p class="card-overline">ENTRENA TU PUNTERÍA</p>
+                        <h3>Reto de precisión</h3>
+                        <p>Afina tus golpes, apunta a los objetivos y supera nuevos retos de precisión.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="reward-promo games-reveal" aria-labelledby="rewardPromoTitle">
+            <div class="reward-art" aria-hidden="true">
+                <span class="reward-art-glow"></span>
+                <svg viewBox="0 0 72 72" focusable="false">
+                    <path d="M13 31h46v34H13zM9 22h54v13H9zM34 22v43M36 21c-11 0-19-2-19-9 0-4 3-6 7-6 7 0 12 9 12 15Zm2 0c11 0 19-2 19-9 0-4-3-6-7-6-7 0-12 9-12 15Z" />
+                </svg>
+            </div>
+            <div class="reward-content">
+                <span class="section-kicker">RECOMPENSAS DE JUEGO</span>
+                <h2 id="rewardPromoTitle">Descuentos por jugar</h2>
+                <p id="rewardPromoCopy">Cada victoria validada acerca tu cuenta a un ciclo de recompensa. Los retos tienen plazos y premios propios.</p>
+                <div class="reward-progress-meta">
+                    <span id="rewardVictoryCount">Progreso de victorias</span>
+                    <span id="rewardRemainingCount">Progreso al siguiente giro por victorias</span>
+                </div>
+                <div class="reward-progress-track" id="rewardProgressTrack" role="progressbar" aria-label="Progreso para el próximo descuento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+                    <div class="reward-progress-fill" id="rewardProgressFill"></div>
+                </div>
+                <div class="reward-challenges" id="rewardChallenges" aria-label="Retos activos"></div>
+                <div class="reward-history">
+                    <section aria-labelledby="rewardCycleTitle">
+                        <h3 id="rewardCycleTitle">Historial de ciclos</h3>
+                        <ul id="rewardCycleHistory"><li>Inicia sesión para consultar tus ciclos.</li></ul>
+                    </section>
+                    <section aria-labelledby="rewardCouponTitle">
+                        <h3 id="rewardCouponTitle">Cupones disponibles</h3>
+                        <ul id="rewardCouponHistory"><li>Inicia sesión para consultar tus cupones.</li></ul>
+                    </section>
+                    <section aria-labelledby="rewardChallengeHistoryTitle">
+                        <h3 id="rewardChallengeHistoryTitle">Historial de retos</h3>
+                        <ul id="rewardChallengeHistory"><li>Inicia sesión para consultar tus retos.</li></ul>
+                    </section>
+                </div>
+            </div>
+            <div class="reward-actions">
+                <span class="reward-available" id="rewardAvailableCount">Descuentos disponibles: —</span>
+                <button class="games-button reward-claim" id="rewardClaimButton" type="button" hidden>Reclamar descuento</button>
+                <a class="games-button games-button-secondary" href="{{ url_for('productos') }}">Ver descuentos <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="reward-result" id="rewardResult" role="status" aria-live="polite" hidden>
+                <strong id="rewardPrize"></strong>
+                <code class="reward-code" id="rewardCode"></code>
+                <button class="reward-copy" id="rewardCopyButton" type="button">Copiar código</button>
+            </div>
+            <p class="reward-status" id="rewardStatus" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="games-info" aria-label="Características de Tennis Arena">
+            <article class="games-info-item games-reveal">
+                <span class="info-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false"><path d="M16 3 19 12l9-5-5 9 6 3-10 2-3 8-3-8-10-2 6-3-5-9 9 5z" /></svg>
+                </span>
+                <div><h3>Contra la IA</h3><p>Compite en un partido rápido y calcula cada devolución.</p></div>
+            </article>
+            <article class="games-info-item games-reveal">
+                <span class="info-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false"><path d="M4 5h24v22H4zM4 16h24M16 5v22M9 5v22M23 5v22" /></svg>
+                </span>
+                <div><h3>Puntuación de tenis</h3><p>Sigue puntos, juegos y sets en un marcador que se actualiza durante el partido.</p></div>
+            </article>
+            <article class="games-info-item games-reveal">
+                <span class="info-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false"><rect x="4" y="5" width="18" height="15" rx="2" /><path d="M9 27h8M13 20v7M24 12h4v15h-8V12h2" /></svg>
+                </span>
+                <div><h3>Multidispositivo</h3><p>Juega en computador, tablet o celular con teclado y controles táctiles.</p></div>
+            </article>
+        </section>
+        {% endif %}
+    </div>
+</main>
+<script>
+'use strict';
+(() => {
+    const canvas = document.getElementById('arenaGameCanvas');
+    const gameRoot = document.getElementById('tennis-arena-game');
+    if (!canvas || !gameRoot || gameRoot.dataset.arenaGameInitialized === 'true') return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No se pudo inicializar el canvas de Tennis Arena.');
+    gameRoot.dataset.arenaGameInitialized = 'true';
+    const status = document.getElementById('arenaGameStatus');
+    const message = document.getElementById('arenaGameMessage');
+    const startButton = document.getElementById('arenaStartButton');
+    const pauseButton = document.getElementById('arenaPauseButton');
+    const joystick = document.getElementById('arenaJoystick');
+    const joystickKnob = document.getElementById('arenaJoystickKnob');
+    const WIDTH = 1200;
+    const HEIGHT = 720;
+    const NET_X = WIDTH / 2;
+    const GRAVITY = 380;
+    const COURT = { left: 150, right: 1050, top: 125, bottom: 595 };
+    const PLAYER_HALF_MARGIN_X = 58;
+    const PLAYER_HALF_MARGIN_Y_TOP = 44;
+    const PLAYER_HALF_MARGIN_Y_BOTTOM = 34;
+    const keys = new Set();
+    const input = { x: 0, y: 0, pointer: null, mouseTarget: null };
+    const player = { x: 355, y: 360, swing: 0, run: 0 };
+    const rival = { x: 845, y: 360, swing: 0, run: 0 };
+    const ball = { x: 0, y: 0, z: 0, vz: 0, vx: 0, vy: 0, live: false, bounce: 0, hitter: 'player', trail: [] };
+    const sets = [0, 0];
+    const games = [0, 0];
+    const matchGames = [0, 0];
+    const points = [0, 0];
+    const loggedIn = {{ 'true' if session.get('user_id') else 'false' }};
+    const matchStartUrl = "{{ url_for('api_iniciar_partida_juego') }}";
+    const matchPointUrl = "{{ url_for('api_registrar_punto_partida_juego') }}";
+    const storageKey = 'tennisArenaProfileV1';
+    const difficultySettings = {
+        easy: { speed: 245, reaction: .38, reach: 43, accuracy: 45, label: 'Fácil' },
+        normal: { speed: 325, reaction: .23, reach: 52, accuracy: 70, label: 'Normal' },
+        hard: { speed: 390, reaction: .12, reach: 63, accuracy: 86, label: 'Difícil' },
+        expert: { speed: 440, reaction: .05, reach: 72, accuracy: 94, label: 'Experto' }
+    };
+    const defaultProfile = {
+        name: 'Jugador',
+        preferences: { difficulty: 'normal', format: 'three', volume: 35, music: 'off', quality: 'high' },
+        stats: { matches: 0, wins: 0, losses: 0, games: 0, sets: 0, xp: 0, history: [] },
+        tournament: { active: false, round: 0 }
+    };
+    let profile = JSON.parse(JSON.stringify(defaultProfile));
+    try {
+        const savedProfile = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (savedProfile && typeof savedProfile === 'object' && !Array.isArray(savedProfile)) {
+            profile = {
+                ...defaultProfile,
+                ...savedProfile,
+                preferences: { ...defaultProfile.preferences, ...(savedProfile.preferences || {}) },
+                stats: { ...defaultProfile.stats, ...(savedProfile.stats || {}) },
+                tournament: { ...defaultProfile.tournament, ...(savedProfile.tournament || {}) }
+            };
+        }
+    } catch (error) {
+        console.error('No se pudo leer el perfil guardado de Tennis Arena.', error);
+    }
+    let serving = 'player';
+    let gameMode = 'solo';
+    let selectedMode = 'solo';
+    let difficulty = difficultySettings[profile.preferences.difficulty] ? profile.preferences.difficulty : 'normal';
+    let matchSetsToWin = profile.preferences.format === 'one' ? 1 : 2;
+    let matchStartedAt = 0;
+    let matchDuration = 0;
+    let aiReactionTimer = 0;
+    let runInput = false;
+    let audioContext = null;
+    let musicTimer = 0;
+    let onlineRoom = null;
+    let onlinePollTimer = 0;
+    let onlineSequence = 0;
+    let onlineRequestPending = false;
+    let onlineSessionGeneration = 0;
+    let remoteControls = { x: 0, y: 0, hit: false, run: false };
+    let remoteInputSequence = 0;
+    let remoteHitSequence = 0;
+    let remoteHitAt = 0;
+    let remoteHitHandledSequence = 0;
+    let remoteHitPending = false;
+    let lastMatchWinner = null;
+    let serverMatchActive = false;
+    let serverMatchId = null;
+    let serverVictoryRegistered = false;
+    let serverPointPending = false;
+    let serverPointSequence = 0;
+    let serverMatchGeneration = 0;
+    let running = false;
+    let started = false;
+    let finished = false;
+    let tieBreak = false;
+    let pointPause = 0;
+    let aiWait = 0;
+    let lastFrame = 0;
+    let gameMessage = '';
+    let messageTimer = 0;
+    let renderScale = 1;
+    let renderOffsetX = 0;
+    let renderOffsetY = 0;
+    let animationFrameId = 0;
+    let tieBreakPointsPlayed = 0;
+    let tieBreakStartingServer = 'player';
+    const createMatchId = () => window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : `partida-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let matchId = createMatchId();
+
+    function resizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        const qualityRatio = profile.preferences.quality === 'low' ? 1 : profile.preferences.quality === 'balanced' ? 1.5 : 2;
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, qualityRatio);
+        const width = Math.max(1, Math.round(bounds.width * pixelRatio));
+        const height = Math.max(1, Math.round(bounds.height * pixelRatio));
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+
+        renderScale = Math.min(canvas.width / WIDTH, canvas.height / HEIGHT);
+        renderOffsetX = (canvas.width - WIDTH * renderScale) / 2;
+        renderOffsetY = (canvas.height - HEIGHT * renderScale) / 2;
+        ctx.setTransform(renderScale, 0, 0, renderScale, renderOffsetX, renderOffsetY);
+    }
+
+    function showStatus(text) {
+        status.textContent = text;
+    }
+
+    function saveProfile() {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(profile));
+        } catch (error) {
+            message.textContent = 'No se pudo guardar el perfil en este dispositivo.';
+            console.error('No se pudo guardar el perfil de Tennis Arena.', error);
+        }
+    }
+
+    function formatDuration(seconds) {
+        const total = Math.max(0, Math.floor(seconds));
+        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    function renderProfile() {
+        const stats = profile.stats;
+        const level = Math.floor(stats.xp / 250) + 1;
+        document.getElementById('arenaStatMatches').textContent = stats.matches;
+        document.getElementById('arenaStatWins').textContent = stats.wins;
+        document.getElementById('arenaStatWinRate').textContent = `${stats.matches ? Math.round(stats.wins / stats.matches * 100) : 0}%`;
+        document.getElementById('arenaStatLevel').textContent = level;
+        document.getElementById('arenaStatGames').textContent = stats.games;
+        document.getElementById('arenaStatSets').textContent = stats.sets;
+        document.getElementById('arenaStatExperience').textContent = `${stats.xp} XP`;
+        document.getElementById('arenaProfileLevel').textContent = `Nivel ${level} · ${stats.xp} XP`;
+        document.getElementById('arenaPlayerName').value = profile.name;
+        const history = document.getElementById('arenaMatchHistory');
+        history.replaceChildren();
+        if (!stats.history.length) {
+            const empty = document.createElement('li');
+            empty.textContent = 'Aún no hay partidos guardados en este dispositivo.';
+            history.append(empty);
+        } else {
+            stats.history.slice(0, 8).forEach((item) => {
+                const row = document.createElement('li');
+                const summary = document.createElement('span');
+                summary.textContent = `${item.result} · ${item.mode}`;
+                const finalScore = document.createElement('strong');
+                finalScore.textContent = `${item.sets[0]}–${item.sets[1]}`;
+                row.append(summary, finalScore);
+                history.append(row);
+            });
+        }
+    }
+
+    function updateModeLabels() {
+        const local = gameMode === 'local';
+        const onlineGuest = gameMode === 'online' && onlineRoom?.player_index === 1;
+        document.getElementById('arenaPlayerScoreName').textContent = onlineGuest ? 'ANFITRIÓN' : profile.name.toUpperCase();
+        document.getElementById('arenaRivalScoreName').textContent = local ? 'JUGADOR 2'
+            : gameMode === 'online' ? onlineGuest ? profile.name.toUpperCase() : 'RIVAL ONLINE'
+            : gameMode === 'tournament' ? 'RIVAL TORNEO' : 'RIVAL IA';
+        document.querySelector('.arena-game-kicker').textContent = local
+            ? 'PARTIDO LOCAL · 2 JUGADORES'
+            : gameMode === 'online' ? 'MULTIJUGADOR ONLINE · PARTIDA EN VIVO'
+            : gameMode === 'training' ? 'ENTRENAMIENTO · PRÁCTICA LIBRE' : gameMode === 'tournament' ? 'TORNEO · PARTIDO DE RONDA' : `PARTIDO RÁPIDO · IA ${difficultySettings[difficulty].label.toUpperCase()}`;
+        document.querySelector('.arena-control-hint').innerHTML = local || gameMode === 'online' && onlineRoom?.player_index === 0
+            ? 'J1: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + <kbd>ESPACIO</kbd> · J2: <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> + <kbd>ENTER</kbd>'
+            : 'Mover: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o flechas · Golpear/sacar: <kbd>ESPACIO</kbd> · Correr: <kbd>SHIFT</kbd>';
+        document.getElementById('arenaModeDescription').textContent = local
+            ? 'Dos jugadores comparten el teclado: jugador 1 usa WASD y espacio; jugador 2 usa flechas y Enter.'
+            : gameMode === 'online' ? 'Conectado a una sala real. Controla tu lado y juega contra la otra persona.'
+            : gameMode === 'training' ? 'Practica el saque, el desplazamiento y la devolución. La rival devuelve menos golpes.'
+                : 'Juega un partido completo contra una rival de inteligencia artificial.';
+    }
+
+    function showArenaPanel(name) {
+        document.querySelectorAll('[data-arena-panel]').forEach((panel) => {
+            const active = panel.dataset.arenaPanel === name;
+            panel.hidden = !active;
+            panel.classList.toggle('is-active', active);
+        });
+        document.querySelectorAll('[data-arena-tab]').forEach((button) => {
+            if (button.dataset.arenaTab === name) button.setAttribute('aria-current', 'page');
+            else button.removeAttribute('aria-current');
+        });
+    }
+
+    function onlineRequestOptions(body) {
+        return { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) };
+    }
+
+    async function checkOnlineResponse(response) {
+        const data = await response.json();
+        if (!response.ok) {
+            const error = new Error(data.error || 'No se pudo completar la conexión online.');
+            error.status = response.status;
+            throw error;
+        }
+        return data;
+    }
+
+    function snapshotOnlineMatch() {
+        return {
+            player: { x: player.x, y: player.y, swing: player.swing, run: player.run },
+            rival: { x: rival.x, y: rival.y, swing: rival.swing, run: rival.run },
+            ball: { ...ball, trail: ball.trail.slice(-8) },
+            sets: [...sets],
+            games: [...games],
+            matchGames: [...matchGames],
+            points: [...points],
+            serving,
+            tieBreak,
+            tieBreakPointsPlayed,
+            tieBreakStartingServer,
+            pointPause,
+            running,
+            finished,
+            matchDuration: matchStartedAt ? (Date.now() - matchStartedAt) / 1000 : 0,
+            gameMessage,
+            messageTimer,
+            winner: lastMatchWinner
+        };
+    }
+
+    async function publishOnlineMatch(room = onlineRoom) {
+        if (!room || onlineRoom !== room || room.player_index !== 0 || !running && !finished) return;
+        const response = await fetch(gameRoot.dataset.onlineStateUrl, onlineRequestOptions({
+            room_id: room.room_id, token: room.token, state: snapshotOnlineMatch()
+        }));
+        await checkOnlineResponse(response);
+        if (onlineRoom === room) {
+            try {
+                sessionStorage.setItem('tennisArenaHostState', JSON.stringify(snapshotOnlineMatch()));
+            } catch (error) {
+                console.error('No se pudo guardar el estado del anfitrión para reconectar.', error);
+            }
+        }
+    }
+
+    function applyOnlineMatch(state) {
+        if (!state || !Array.isArray(state.sets) || !Array.isArray(state.games) || !Array.isArray(state.points)) return;
+        const wasFinished = finished;
+        Object.assign(player, state.player);
+        Object.assign(rival, state.rival);
+        Object.assign(ball, state.ball);
+        sets.splice(0, 2, ...state.sets);
+        games.splice(0, 2, ...state.games);
+        if (Array.isArray(state.matchGames)) matchGames.splice(0, 2, ...state.matchGames);
+        points.splice(0, 2, ...state.points);
+        serving = state.serving;
+        tieBreak = state.tieBreak;
+        tieBreakPointsPlayed = Number(state.tieBreakPointsPlayed) || 0;
+        tieBreakStartingServer = state.tieBreakStartingServer === 'rival' ? 'rival' : 'player';
+        pointPause = Number(state.pointPause) || 0;
+        running = state.running;
+        finished = Boolean(state.finished);
+        gameMessage = state.gameMessage || '';
+        messageTimer = Number(state.messageTimer) || 0;
+        lastMatchWinner = state.winner || null;
+        if (state.matchDuration) matchDuration = state.matchDuration;
+        if (running && !matchStartedAt) matchStartedAt = Date.now() - matchDuration * 1000;
+        updateScore();
+        if (running) {
+            startButton.textContent = '▶ En juego';
+            pauseButton.disabled = true;
+            document.getElementById('arenaResultOverlay').hidden = true;
+            showStatus(state.ball?.live ? '¡Pelota en juego!' : serving === 'rival'
+                ? 'Tu saque · pulsa ESPACIO o GOLPEAR'
+                : 'El anfitrión prepara el saque');
+        } else if (!finished) {
+            showStatus('Esperando que el anfitrión inicie el partido.');
+        }
+        if (state.finished && !wasFinished) {
+            finished = false;
+            matchDuration = Number(state.matchDuration) || 0;
+            matchStartedAt = Date.now() - matchDuration * 1000;
+            finishMatch(state.winner === 'player' ? 'rival' : 'player');
+        }
+    }
+
+    async function pollOnlineRoom() {
+        if (!onlineRoom || onlineRequestPending) return;
+        const room = onlineRoom;
+        const generation = onlineSessionGeneration;
+        onlineRequestPending = true;
+        const connection = document.getElementById('arenaConnectionStatus');
+        try {
+            const response = await fetch(gameRoot.dataset.onlinePollUrl, onlineRequestOptions({
+                room_id: room.room_id, token: room.token
+            }));
+            const data = await checkOnlineResponse(response);
+            if (onlineRoom !== room || generation !== onlineSessionGeneration) return;
+            connection.classList.toggle('is-connected', data.connected);
+            connection.classList.toggle('is-waiting', !data.connected);
+            connection.textContent = data.connected ? 'Rival conectado' : 'Esperando rival';
+            if (room.player_index === 0) {
+                if (data.input) remoteControls = data.input;
+                remoteInputSequence = data.input_seq;
+                remoteHitSequence = data.hit_seq;
+                remoteHitAt = Number(data.hit_at) || 0;
+                if (running || finished) await publishOnlineMatch(room);
+            } else {
+                if (data.state && data.state_seq > onlineSequence) {
+                    onlineSequence = data.state_seq;
+                    applyOnlineMatch(data.state);
+                }
+                const x = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) -
+                    (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) + input.x;
+                const y = (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) -
+                    (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) + input.y;
+                const guestDirection = room.player_index === 1 ? -1 : 1;
+                const inputResponse = await fetch(gameRoot.dataset.onlineStateUrl.replace(/\/state$/, '/input'), onlineRequestOptions({
+                    room_id: room.room_id,
+                    token: room.token,
+                    input: { x: x * guestDirection, y, hit: remoteHitPending, run: runInput }
+                }));
+                await checkOnlineResponse(inputResponse);
+                if (onlineRoom === room && generation === onlineSessionGeneration) remoteHitPending = false;
+            }
+        } catch (error) {
+            if (onlineRoom !== room || generation !== onlineSessionGeneration) return;
+            if (error.status === 404) {
+                leaveOnlineRoom(true);
+                document.getElementById('arenaOnlineMessage').textContent =
+                    'La sala expiró o ya no está disponible. Crea una nueva o únete a otra.';
+            } else {
+                connection.classList.remove('is-connected', 'is-waiting');
+                connection.textContent = 'Conexión interrumpida';
+                document.getElementById('arenaOnlineMessage').textContent = error.message;
+            }
+        } finally {
+            if (generation === onlineSessionGeneration) onlineRequestPending = false;
+        }
+    }
+
+    function startOnlinePolling() {
+        window.clearInterval(onlinePollTimer);
+        onlinePollTimer = window.setInterval(pollOnlineRoom, 100);
+        pollOnlineRoom();
+    }
+
+    function setOnlineRoom(room) {
+        onlineSessionGeneration += 1;
+        onlineRequestPending = false;
+        onlineRoom = room;
+        onlineSequence = 0;
+        remoteInputSequence = 0;
+        remoteHitSequence = 0;
+        remoteHitAt = 0;
+        remoteHitHandledSequence = 0;
+        remoteControls = { x: 0, y: 0, hit: false, run: false };
+        sessionStorage.setItem('tennisArenaOnlineRoom', JSON.stringify(room));
+        gameMode = 'online';
+        updateModeLabels();
+        showArenaPanel('online');
+        resetMatch(room.player_index === 0);
+        const code = document.getElementById('arenaRoomCode');
+        code.value = room.code;
+        document.getElementById('arenaCreateRoom').hidden = true;
+        document.getElementById('arenaJoinRoom').hidden = true;
+        document.getElementById('arenaLeaveRoom').hidden = false;
+        document.getElementById('arenaOnlineMessage').textContent = room.player_index === 0
+            ? `Sala ${room.code} creada. Comparte el código para que se una tu rival.`
+            : `Te uniste a la sala ${room.code}. Esperando el inicio del anfitrión.`;
+        document.getElementById('arenaConnectionStatus').textContent = 'Esperando rival';
+        document.getElementById('arenaConnectionStatus').className = 'arena-connection is-waiting';
+        startButton.disabled = room.player_index === 1;
+        pauseButton.disabled = true;
+        startOnlinePolling();
+    }
+
+    function updateTournament(winner) {
+        const tournamentStatus = document.getElementById('arenaTournamentStatus');
+        if (winner !== 'player') {
+            profile.tournament = { active: false, round: 0 };
+            tournamentStatus.textContent = 'El rival ganó esta ronda. Puedes inscribirte para intentarlo de nuevo.';
+        } else if (profile.tournament.round >= 3) {
+            profile.tournament = { active: false, round: 0 };
+            tournamentStatus.textContent = '¡Campeón del torneo! Has ganado las tres rondas.';
+        } else {
+            profile.tournament.round += 1;
+            tournamentStatus.textContent = `¡Ronda ganada! Próxima: ronda ${profile.tournament.round + 1} de 3.`;
+        }
+        saveProfile();
+    }
+
+    function playSound(frequency = 480, duration = .08) {
+        const volume = Number(profile.preferences.volume) / 100;
+        if (!volume) return;
+        try {
+            audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+            gain.gain.setValueAtTime(Math.max(.001, volume * .07), audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration);
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        } catch (error) {
+            console.error('No se pudo reproducir el sonido del partido.', error);
+        }
+    }
+
+    function formatPoints() {
+        if (tieBreak) return `${points[0]}–${points[1]}`;
+        if (points[0] >= 3 && points[1] >= 3) {
+            if (points[0] === points[1]) return '40–40';
+            return points[0] > points[1] ? 'AD–40' : '40–AD';
+        }
+        const scoreNames = ['0', '15', '30', '40'];
+        return `${scoreNames[points[0]]}–${scoreNames[points[1]]}`;
+    }
+
+    function updateScore() {
+        const guestView = gameMode === 'online' && onlineRoom && onlineRoom.player_index === 1;
+        const first = guestView ? 1 : 0;
+        const second = 1 - first;
+        const scoreNames = ['0', '15', '30', '40'];
+        const displayPoints = tieBreak
+            ? `${points[first]}–${points[second]}`
+            : points[first] >= 3 && points[second] >= 3
+                ? points[first] === points[second] ? '40–40' : points[first] > points[second] ? 'AD–40' : '40–AD'
+                : `${scoreNames[points[first]]}–${scoreNames[points[second]]}`;
+        document.getElementById('arenaSets').textContent = `${sets[first]}–${sets[second]}`;
+        document.getElementById('arenaGames').textContent = `${games[first]}–${games[second]}`;
+        document.getElementById('arenaPoints').textContent = displayPoints;
+        document.getElementById('arenaPlayerServe').hidden = (serving === 'player') === guestView;
+        document.getElementById('arenaRivalServe').hidden = (serving === 'rival') === guestView;
+    }
+
+    function positionServe() {
+        player.x = 355;
+        player.y = 360;
+        rival.x = 845;
+        rival.y = 360;
+        ball.x = serving === 'player' ? player.x + 38 : rival.x - 38;
+        ball.y = serving === 'player' ? player.y : rival.y;
+        ball.z = 16;
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.vz = 0;
+        ball.live = false;
+        if (gameMode === 'online' && onlineRoom?.player_index === 0) {
+            remoteHitHandledSequence = remoteHitSequence;
+        }
+        ball.bounce = 0;
+        ball.hitter = serving;
+        ball.trail.length = 0;
+        aiWait = 0;
+        if (!finished && running) {
+            showStatus(serving === 'player' ? 'Tu saque · pulsa ESPACIO o GOLPEAR' : gameMode === 'local' ? 'Turno de saque · jugador 2 pulsa ENTER' : 'El rival prepara el saque');
+        }
+    }
+
+    function resetMatch(startImmediately) {
+        serverMatchGeneration += 1;
+        serverMatchActive = false;
+        serverPointPending = false;
+        serverMatchId = null;
+        serverVictoryRegistered = false;
+        sets[0] = 0;
+        sets[1] = 0;
+        games[0] = 0;
+        games[1] = 0;
+        matchGames[0] = 0;
+        matchGames[1] = 0;
+        points[0] = 0;
+        points[1] = 0;
+        serving = 'player';
+        tieBreak = false;
+        tieBreakPointsPlayed = 0;
+        tieBreakStartingServer = 'player';
+        pointPause = 0;
+        messageTimer = 0;
+        gameMessage = '';
+        finished = false;
+        lastMatchWinner = null;
+        matchDuration = 0;
+        matchStartedAt = startImmediately ? Date.now() : 0;
+        aiReactionTimer = 0;
+        document.getElementById('arenaResultOverlay').hidden = true;
+        running = startImmediately;
+        started = startImmediately;
+        matchId = createMatchId();
+        message.textContent = '';
+        pauseButton.disabled = !running;
+        startButton.textContent = running ? '▶ En juego' : '▶ Iniciar partida';
+        updateScore();
+        positionServe();
+        if (!running) showStatus('Pulsa Iniciar para jugar');
+    }
+
+    async function startValidatedMatch() {
+        const response = await fetch(matchStartUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ dificultad, sets_para_ganar: matchSetsToWin })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'No se pudo iniciar una partida validada.');
+        serverMatchId = data.partida_id;
+        serverPointSequence = data.secuencia;
+        matchSetsToWin = data.sets_para_ganar;
+        sets.splice(0, 2, ...data.sets);
+        games.splice(0, 2, ...data.juegos);
+        matchGames.splice(0, 2, ...data.match_games);
+        points.splice(0, 2, ...data.puntos);
+        tieBreak = data.tie_break;
+        serverVictoryRegistered = false;
+        serverMatchActive = true;
+        updateScore();
+    }
+
+    function reportVictory() {
+        if (!loggedIn) {
+            message.textContent = 'Inicia sesión para guardar tus victorias y desbloquear recompensas.';
+            return;
+        }
+        message.textContent = serverVictoryRegistered
+            ? '¡Victoria confirmada por el servidor y guardada en tu progreso!'
+            : 'No se pudo confirmar esta victoria en el servidor.';
+        if (serverVictoryRegistered) {
+            window.dispatchEvent(new CustomEvent('tennisArenaRewardUpdated'));
+        }
+    }
+
+    function finishMatch(winner) {
+        finished = true;
+        running = false;
+        lastMatchWinner = winner;
+        pauseButton.disabled = true;
+        startButton.textContent = '▶ Nueva partida';
+        matchDuration = matchStartedAt ? (Date.now() - matchStartedAt) / 1000 : 0;
+        const playerWon = winner === 'player';
+        const winnerName = playerWon ? profile.name : gameMode === 'local' ? 'Jugador 2' : 'Rival de Tennis Arena';
+        const guestView = gameMode === 'online' && onlineRoom?.player_index === 1;
+        const profileIndex = guestView ? 1 : 0;
+        const opponentIndex = 1 - profileIndex;
+        document.getElementById('arenaResultTitle').textContent = gameMode === 'local'
+            ? `¡GANADOR: ${winnerName.toUpperCase()}!`
+            : playerWon ? '¡VICTORIA!' : 'DERROTA';
+        document.getElementById('arenaResultDetails').textContent =
+            `${winnerName} · Sets ${sets[profileIndex]}–${sets[opponentIndex]} · Juegos ${matchGames[profileIndex]}–${matchGames[opponentIndex]} · ${formatDuration(matchDuration)}`;
+        document.getElementById('arenaResultOverlay').hidden = false;
+        showStatus(playerWon ? '¡Victoria! Has ganado el partido' : gameMode === 'local' ? 'Partido terminado · ganó el jugador 2' : 'Partido terminado · gana el rival');
+        if (gameMode !== 'training') {
+            profile.stats.matches += 1;
+            profile.stats.games += matchGames[profileIndex];
+            profile.stats.sets += sets[profileIndex];
+            if (playerWon) {
+                profile.stats.wins += 1;
+                profile.stats.xp += 50;
+            } else {
+                profile.stats.losses += 1;
+                profile.stats.xp += 20;
+            }
+            profile.stats.history.unshift({
+                result: playerWon ? 'Victoria' : 'Derrota',
+                mode: gameMode === 'local' ? 'Local' : gameMode === 'tournament' ? 'Torneo' : gameMode === 'online' ? 'Online' : 'IA',
+                sets: [sets[profileIndex], sets[opponentIndex]],
+                date: new Date().toLocaleDateString('es-CO')
+            });
+            profile.stats.history = profile.stats.history.slice(0, 30);
+            saveProfile();
+            renderProfile();
+        }
+        if (gameMode === 'solo' && playerWon) reportVictory();
+        if (gameMode === 'tournament') updateTournament(winner);
+    }
+
+    function awardPoint(winner, reason, serverConfirmed = false) {
+        if (!ball.live || finished) return;
+        if (serverMatchActive && !serverConfirmed) {
+            if (serverPointPending) return;
+            serverPointPending = true;
+            const generation = serverMatchGeneration;
+            let retryScheduled = false;
+            fetch(matchPointUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ partida_id: serverMatchId, secuencia: serverPointSequence })
+            }).then(async (response) => {
+                const data = await response.json();
+                if (!response.ok) {
+                    const error = new Error(data.error || 'No se pudo validar el punto.');
+                    error.retryAfterMs = response.status === 429 ? Number(data.retry_after_ms) : 0;
+                    throw error;
+                }
+                if (generation !== serverMatchGeneration) return;
+                serverPointSequence = data.secuencia;
+                if (data.repetida) {
+                    sets.splice(0, 2, ...data.sets);
+                    games.splice(0, 2, ...data.juegos);
+                    matchGames.splice(0, 2, ...data.match_games);
+                    points.splice(0, 2, ...data.puntos);
+                    tieBreak = data.tie_break;
+                    ball.live = false;
+                    updateScore();
+                    if (data.terminada) {
+                        serverMatchActive = false;
+                        serverVictoryRegistered = data.ganador === 'jugador';
+                        finishMatch(data.ganador === 'jugador' ? 'player' : 'rival');
+                    }
+                    return;
+                }
+                serverVictoryRegistered = Boolean(data.terminada && data.ganador === 'jugador');
+                if (data.terminada) serverMatchActive = false;
+                awardPoint(data.punto === 'jugador' ? 'player' : 'rival', reason, true);
+                if (data.giro_desbloqueado) {
+                    message.textContent = '¡Llegaste a 100 victorias! Ya tienes una jugada de ruleta disponible.';
+                }
+            }).catch((error) => {
+                if (generation !== serverMatchGeneration) return;
+                if (error.retryAfterMs > 0) {
+                    retryScheduled = true;
+                    window.setTimeout(() => {
+                        if (generation !== serverMatchGeneration) return;
+                        serverPointPending = false;
+                        awardPoint(winner, reason);
+                    }, error.retryAfterMs);
+                    return;
+                }
+                serverMatchActive = false;
+                started = false;
+                running = false;
+                showStatus('Partida no validada');
+                message.textContent = error.message;
+            }).finally(() => {
+                if (!retryScheduled) serverPointPending = false;
+            });
+            return;
+        }
+        ball.live = false;
+        const index = winner === 'player' ? 0 : 1;
+        points[index] += 1;
+        gameMessage = winner === 'player' ? '¡PUNTO!' : 'PUNTO DEL RIVAL';
+        messageTimer = 1.35;
+        playSound(winner === 'player' ? 660 : 330, .11);
+        showStatus(reason ? `${gameMessage} · ${reason}` : gameMessage);
+
+        if (tieBreak) {
+            tieBreakPointsPlayed += 1;
+            if (tieBreakPointsPlayed === 1 || tieBreakPointsPlayed % 2 === 1) {
+                serving = serving === 'player' ? 'rival' : 'player';
+            }
+            if (points[index] >= 7 && points[index] - points[1 - index] >= 2) {
+                matchGames[index] += 1;
+                sets[index] += 1;
+                games[0] = 0;
+                games[1] = 0;
+                tieBreak = false;
+                tieBreakPointsPlayed = 0;
+                serving = tieBreakStartingServer === 'player' ? 'rival' : 'player';
+                points[0] = 0;
+                points[1] = 0;
+                if (sets[index] >= matchSetsToWin) {
+                    updateScore();
+                    finishMatch(winner);
+                    return;
+                }
+            }
+        } else if (points[index] >= 4 && points[index] - points[1 - index] >= 2) {
+            games[index] += 1;
+            matchGames[index] += 1;
+            points[0] = 0;
+            points[1] = 0;
+            serving = serving === 'player' ? 'rival' : 'player';
+            if (games[index] >= 6 && games[index] - games[1 - index] >= 2) {
+                sets[index] += 1;
+                games[0] = 0;
+                games[1] = 0;
+                if (sets[index] >= matchSetsToWin) {
+                    updateScore();
+                    finishMatch(winner);
+                    return;
+                }
+            } else if (games[0] === 6 && games[1] === 6) {
+                tieBreak = true;
+                tieBreakPointsPlayed = 0;
+                tieBreakStartingServer = serving;
+                points[0] = 0;
+                points[1] = 0;
+            }
+        }
+        updateScore();
+        pointPause = 1.35;
+    }
+
+    function startServe(server) {
+        if (!running || finished || ball.live || pointPause > 0) return;
+        serving = server;
+        const serverPlayer = server === 'player' ? player : rival;
+        ball.x = server === 'player' ? serverPlayer.x + 38 : serverPlayer.x - 38;
+        ball.y = serverPlayer.y + (Math.random() - .5) * 55;
+        ball.z = 28;
+        ball.vx = server === 'player' ? 350 : -350;
+        ball.vy = (Math.random() - .5) * 55;
+        ball.vz = 260;
+        ball.live = true;
+        ball.bounce = 0;
+        ball.hitter = server;
+        ball.trail.length = 0;
+        showStatus('¡Pelota en juego!');
+    }
+
+    function hitBall(side) {
+        if (!running || finished || pointPause > 0) return false;
+        if (!ball.live) {
+            if (serving === side) startServe(side);
+            return serving === side;
+        }
+        const hitter = side === 'player' ? player : rival;
+        const approaching = side === 'player' ? ball.vx < 0 : ball.vx > 0;
+        const onOwnSide = side === 'player' ? ball.x < NET_X : ball.x > NET_X;
+        if (!approaching || !onOwnSide || ball.z > 96) return false;
+        if (Math.hypot(ball.x - hitter.x, ball.y - hitter.y) > 84) return false;
+
+        const direction = side === 'player' ? 1 : -1;
+        const target = side === 'player' ? rival : player;
+        const targetX = side === 'player' ? COURT.right - 90 : COURT.left + 90;
+        ball.z = Math.max(36, ball.z);
+        ball.vz = 145;
+        const flightTime = (ball.vz + Math.sqrt(ball.vz ** 2 + 2 * GRAVITY * ball.z)) / GRAVITY;
+        ball.vx = direction * Math.max(240, Math.min(370, Math.abs(targetX - ball.x) / flightTime));
+        const targetY = Math.max(COURT.top + 70, Math.min(COURT.bottom - 70, target.y + (Math.random() - .5) * 36));
+        ball.vy = Math.max(-130, Math.min(130, (targetY - ball.y) / flightTime));
+        ball.live = true;
+        ball.bounce = 0;
+        ball.hitter = side;
+        hitter.swing = .32;
+        if (side === 'player' && (gameMode === 'solo' || gameMode === 'tournament' || gameMode === 'training')) {
+            aiReactionTimer = difficultySettings[gameMode === 'training' ? 'easy' : difficulty].reaction;
+        }
+        playSound(side === 'player' ? 560 : 420, .055);
+        ball.trail.length = 0;
+        showStatus(side === 'player' ? '¡Buen golpe! Prepárate para devolverla' : 'Devuelve el golpe del rival');
+        return true;
+    }
+
+    function moveCharacter(character, side, dt, destination, sprinting = false) {
+        const aiDifficulty = gameMode === 'training' ? 'easy' : difficulty;
+        const baseSpeed = side === 'rival' && (gameMode === 'solo' || gameMode === 'tournament' || gameMode === 'training')
+            ? difficultySettings[aiDifficulty].speed
+            : 330;
+        const minX = side === 'player' ? COURT.left + PLAYER_HALF_MARGIN_X : NET_X + PLAYER_HALF_MARGIN_X;
+        const maxX = side === 'player' ? NET_X - PLAYER_HALF_MARGIN_X : COURT.right - PLAYER_HALF_MARGIN_X;
+        const targetX = Math.max(minX, Math.min(maxX, destination.x));
+        const targetY = Math.max(
+            COURT.top + PLAYER_HALF_MARGIN_Y_TOP,
+            Math.min(COURT.bottom - PLAYER_HALF_MARGIN_Y_BOTTOM, destination.y)
+        );
+        const dx = targetX - character.x;
+        const dy = targetY - character.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance > 2) {
+            const step = Math.min(distance, baseSpeed * (sprinting ? 1.42 : 1) * dt);
+            character.x += dx / distance * step;
+            character.y += dy / distance * step;
+            character.run += dt * 13;
+        } else {
+            character.run = 0;
+        }
+    }
+
+    function update(dt) {
+        if (!running || finished) return;
+        if (gameMode === 'online' && onlineRoom?.player_index === 1) return;
+        messageTimer = Math.max(0, messageTimer - dt);
+        if (pointPause > 0) {
+            pointPause = Math.max(0, pointPause - dt);
+            if (pointPause === 0) {
+                positionServe();
+                if (serving === 'rival') aiWait = .5;
+            }
+            return;
+        }
+
+        if (input.mouseTarget) {
+            moveCharacter(player, 'player', dt, input.mouseTarget, gameMode === 'local' ? keys.has('ShiftLeft') : runInput);
+        } else {
+            const allowArrowMovement = gameMode !== 'local';
+            const x = (keys.has('KeyD') || allowArrowMovement && keys.has('ArrowRight') ? 1 : 0) -
+                (keys.has('KeyA') || allowArrowMovement && keys.has('ArrowLeft') ? 1 : 0) + input.x;
+            const y = (keys.has('KeyS') || allowArrowMovement && keys.has('ArrowDown') ? 1 : 0) -
+                (keys.has('KeyW') || allowArrowMovement && keys.has('ArrowUp') ? 1 : 0) + input.y;
+            const magnitude = Math.hypot(x, y);
+            if (magnitude > 0) {
+                const sprinting = gameMode === 'local' ? keys.has('ShiftLeft') : runInput;
+                const scale = 330 * (sprinting ? 1.42 : 1) * dt / Math.max(1, magnitude);
+                moveCharacter(player, 'player', dt, { x: player.x + x * scale, y: player.y + y * scale }, sprinting);
+            }
+        }
+
+        if (!ball.live) {
+            if (serving === 'rival' && gameMode === 'online' && onlineRoom?.player_index === 0 &&
+                remoteHitSequence > remoteHitHandledSequence && Date.now() - remoteHitAt < 900) {
+                remoteHitHandledSequence = remoteHitSequence;
+                startServe('rival');
+            } else if (serving === 'rival' && gameMode === 'local' && keys.has('Enter')) {
+                startServe('rival');
+            } else if (serving === 'rival' && gameMode !== 'local' && gameMode !== 'online') {
+                aiWait += dt;
+                if (aiWait >= .75) startServe('rival');
+            }
+            return;
+        }
+
+        if (gameMode === 'local' || gameMode === 'online' && onlineRoom?.player_index === 0) {
+            const rivalX = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+            const rivalY = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
+            const remoteX = gameMode === 'online' ? remoteControls.x : 0;
+            const remoteY = gameMode === 'online' ? remoteControls.y : 0;
+            const movementX = gameMode === 'online' ? remoteX : rivalX;
+            const movementY = gameMode === 'online' ? remoteY : rivalY;
+            if (movementX || movementY) {
+                const sprinting = gameMode === 'online' ? remoteControls.run : keys.has('ShiftRight');
+                const scale = 330 * (sprinting ? 1.42 : 1) * dt / Math.max(1, Math.hypot(movementX, movementY));
+                moveCharacter(rival, 'rival', dt, { x: rival.x + movementX * scale, y: rival.y + movementY * scale }, sprinting);
+            }
+        } else {
+            aiReactionTimer = Math.max(0, aiReactionTimer - dt);
+            const targetX = ball.vx > 0 ? Math.min(COURT.right - PLAYER_HALF_MARGIN_X, ball.x + 24) : rival.x;
+            const targetY = ball.vx > 0 ? ball.y : (ball.live ? COURT.top + 90 + (ball.y - COURT.top) * .55 : rival.y);
+            if (aiReactionTimer === 0 || ball.vx < 0) {
+                moveCharacter(rival, 'rival', dt, { x: targetX, y: targetY });
+            }
+        }
+        rival.swing = Math.max(0, rival.swing - dt);
+        player.swing = Math.max(0, player.swing - dt);
+        if (gameMode === 'local' || gameMode === 'online' && onlineRoom?.player_index === 0) {
+            const remoteHit = gameMode === 'online' && remoteHitSequence > remoteHitHandledSequence;
+            if ((keys.has('Enter') || remoteHit) && ball.vx > 0 && ball.z < 96) {
+                const hitLanded = hitBall('rival');
+                if (remoteHit && hitLanded) remoteHitHandledSequence = remoteHitSequence;
+            }
+            if (remoteHit && Date.now() - remoteHitAt >= 900) remoteHitHandledSequence = remoteHitSequence;
+        } else if (ball.vx > 0 && ball.z < 75 &&
+            Math.hypot(ball.x - rival.x, ball.y - rival.y) < difficultySettings[gameMode === 'training' ? 'easy' : difficulty].reach) {
+            const accuracy = difficultySettings[gameMode === 'training' ? 'easy' : difficulty].accuracy;
+            if (Math.random() * 100 < accuracy) hitBall('rival');
+        }
+
+        ball.trail.push({ x: ball.x, y: ball.y, z: ball.z });
+        if (ball.trail.length > 10) ball.trail.shift();
+        const previousX = ball.x;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
+        ball.vz -= GRAVITY * dt;
+
+        if ((previousX - NET_X) * (ball.x - NET_X) <= 0 && previousX !== ball.x && ball.z < 34) {
+            awardPoint(ball.hitter === 'player' ? 'rival' : 'player', '¡La pelota tocó la red!');
+            return;
+        }
+        if (ball.x < COURT.left || ball.x > COURT.right || ball.y < COURT.top || ball.y > COURT.bottom) {
+            const winner = ball.bounce > 0 ? ball.hitter : ball.hitter === 'player' ? 'rival' : 'player';
+            awardPoint(winner, '¡Fuera!');
+            return;
+        }
+        if (ball.z <= 0) {
+            ball.z = 0;
+            if (ball.bounce > 0) {
+                awardPoint(ball.hitter === 'player' ? 'player' : 'rival', '¡Segundo bote!');
+                return;
+            }
+            const landedOnOpponentSide = ball.hitter === 'player' ? ball.x > NET_X : ball.x < NET_X;
+            if (!landedOnOpponentSide) {
+                awardPoint(ball.hitter === 'player' ? 'rival' : 'player', '¡La pelota no pasó la red!');
+                return;
+            }
+            ball.bounce = 1;
+            ball.vz = 138;
+            ball.vx *= .78;
+            ball.vy *= .78;
+        }
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+    }
+
+    function drawScenery() {
+        const grass = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+        grass.addColorStop(0, '#176839');
+        grass.addColorStop(.52, '#278746');
+        grass.addColorStop(1, '#15582f');
+        ctx.fillStyle = grass;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        for (let y = 0; y < HEIGHT; y += 20) {
+            for (let x = (y % 40) / 2; x < WIDTH; x += 38) {
+                ctx.fillStyle = ((x * 3 + y * 7) % 4) < 2 ? '#ffffff08' : '#001b0e12';
+                ctx.fillRect(x, y, 15, 2);
+            }
+        }
+
+        ctx.fillStyle = '#0b351f';
+        ctx.fillRect(15, 22, WIDTH - 30, 20);
+        ctx.fillRect(15, HEIGHT - 42, WIDTH - 30, 20);
+        ctx.fillRect(15, 22, 18, HEIGHT - 44);
+        ctx.fillRect(WIDTH - 33, 22, 18, HEIGHT - 44);
+        ctx.strokeStyle = '#081a22';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(22, 25, WIDTH - 44, HEIGHT - 50);
+        ctx.strokeStyle = '#4c9860';
+        ctx.lineWidth = 2;
+        for (let x = 32; x < WIDTH - 30; x += 22) {
+            ctx.beginPath();
+            ctx.moveTo(x, 25);
+            ctx.lineTo(x, 42);
+            ctx.moveTo(x, HEIGHT - 42);
+            ctx.lineTo(x, HEIGHT - 25);
+            ctx.stroke();
+        }
+        for (let y = 42; y < HEIGHT - 32; y += 22) {
+            ctx.beginPath();
+            ctx.moveTo(22, y);
+            ctx.lineTo(39, y);
+            ctx.moveTo(WIDTH - 39, y);
+            ctx.lineTo(WIDTH - 22, y);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = '#10426a';
+        roundedRect(500, 7, 200, 39, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#3189ce';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#d7efff';
+        ctx.beginPath();
+        ctx.arc(600, 26, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#62b5ea';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(595, 17);
+        ctx.quadraticCurveTo(604, 26, 595, 35);
+        ctx.moveTo(605, 17);
+        ctx.quadraticCurveTo(596, 26, 605, 35);
+        ctx.stroke();
+
+        drawBench(67, 226);
+        drawBench(1133, 428);
+        drawFloodlight(65, 633, -1);
+        drawFloodlight(1135, 85, 1);
+    }
+
+    function drawBench(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = '#132e39';
+        ctx.fillRect(-21, -48, 42, 94);
+        ctx.fillStyle = '#e79435';
+        for (let slat = -18; slat <= 18; slat += 9) ctx.fillRect(slat, -42, 5, 82);
+        ctx.strokeStyle = '#f6bc57';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-22, -45, 44, 88);
+        ctx.restore();
+    }
+
+    function drawFloodlight(x, y, direction) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(direction * .55);
+        ctx.fillStyle = '#113a55';
+        ctx.fillRect(-7, -34, 14, 58);
+        ctx.fillStyle = '#70c8ff';
+        roundedRect(-20, -44, 40, 18, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#0c2032';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawCourt() {
+        ctx.save();
+        ctx.shadowColor = '#001d18a8';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = '#104d31';
+        roundedRect(COURT.left - 10, COURT.top - 10, COURT.right - COURT.left + 20, COURT.bottom - COURT.top + 20, 5);
+        ctx.fill();
+        ctx.restore();
+
+        const courtGradient = ctx.createLinearGradient(COURT.left, COURT.top, COURT.right, COURT.bottom);
+        courtGradient.addColorStop(0, '#087be0');
+        courtGradient.addColorStop(.5, '#0569c9');
+        courtGradient.addColorStop(1, '#0754a8');
+        ctx.fillStyle = courtGradient;
+        ctx.fillRect(COURT.left, COURT.top, COURT.right - COURT.left, COURT.bottom - COURT.top);
+        ctx.fillStyle = '#ffffff08';
+        ctx.fillRect(COURT.left, COURT.top, 450, COURT.bottom - COURT.top);
+        ctx.fillStyle = '#001e4014';
+        ctx.fillRect(NET_X, COURT.top, 450, COURT.bottom - COURT.top);
+
+        ctx.strokeStyle = '#f5fbff';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(COURT.left, COURT.top, COURT.right - COURT.left, COURT.bottom - COURT.top);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(COURT.left, COURT.top + 42);
+        ctx.lineTo(COURT.right, COURT.top + 42);
+        ctx.moveTo(COURT.left, COURT.bottom - 42);
+        ctx.lineTo(COURT.right, COURT.bottom - 42);
+        ctx.moveTo(385, COURT.top);
+        ctx.lineTo(385, COURT.bottom);
+        ctx.moveTo(815, COURT.top);
+        ctx.lineTo(815, COURT.bottom);
+        ctx.moveTo(385, 360);
+        ctx.lineTo(NET_X, 360);
+        ctx.moveTo(NET_X, 360);
+        ctx.lineTo(815, 360);
+        ctx.stroke();
+
+        ctx.fillStyle = '#061a28a8';
+        ctx.fillRect(NET_X - 10, COURT.top - 3, 20, COURT.bottom - COURT.top + 6);
+        ctx.strokeStyle = '#a8d7f0';
+        ctx.lineWidth = 2;
+        for (let y = COURT.top + 4; y < COURT.bottom; y += 9) {
+            ctx.beginPath();
+            ctx.moveTo(NET_X - 7, y);
+            ctx.lineTo(NET_X + 7, y + 9);
+            ctx.moveTo(NET_X + 7, y);
+            ctx.lineTo(NET_X - 7, y + 9);
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#e7f6ff';
+        ctx.fillRect(NET_X - 3, COURT.top - 8, 6, COURT.bottom - COURT.top + 16);
+        ctx.fillStyle = '#0879cf';
+        ctx.beginPath();
+        ctx.arc(NET_X, COURT.top - 9, 10, 0, Math.PI * 2);
+        ctx.arc(NET_X, COURT.bottom + 9, 10, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawPlayer(character, team, timestamp) {
+        const isPlayer = team === 'player';
+        const shirt = isPlayer ? '#118bff' : '#ff353e';
+        const shorts = isPlayer ? '#073d80' : '#a9212d';
+        const faceX = isPlayer ? 10 : -10;
+        const stride = character.run ? Math.sin(timestamp / 45) * 9 : 0;
+        const armSwing = character.swing > 0 ? Math.sin(character.swing * 17) * 1.1 : 0;
+
+        ctx.save();
+        ctx.translate(character.x, character.y);
+        ctx.fillStyle = '#00192e66';
+        ctx.beginPath();
+        ctx.ellipse(0, 21, 28, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f5f6f7';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-8, 8);
+        ctx.lineTo(-11 + stride, 20);
+        ctx.lineTo(-13 + stride, 29);
+        ctx.moveTo(8, 8);
+        ctx.lineTo(12 - stride, 20);
+        ctx.lineTo(14 - stride, 29);
+        ctx.stroke();
+        ctx.fillStyle = '#182a43';
+        roundedRect(-21 + stride, 25, 16, 7, 3);
+        ctx.fill();
+        roundedRect(7 - stride, 25, 16, 7, 3);
+        ctx.fill();
+
+        ctx.fillStyle = shorts;
+        roundedRect(-16, -1, 32, 18, 6);
+        ctx.fill();
+        ctx.fillStyle = shirt;
+        roundedRect(-18, -21, 36, 27, 9);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff35';
+        ctx.fillRect(-2, -18, 3, 22);
+
+        ctx.strokeStyle = '#f1bb91';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(-13, -15);
+        ctx.lineTo(-22, -3);
+        ctx.lineTo(-15, 1);
+        ctx.moveTo(13, -15);
+        ctx.lineTo(22, -4);
+        ctx.lineTo(isPlayer ? 28 : -28, -7);
+        ctx.stroke();
+
+        ctx.fillStyle = '#f0bd95';
+        ctx.beginPath();
+        ctx.arc(0, -31, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = isPlayer ? '#eaf7ff' : '#442b25';
+        ctx.beginPath();
+        ctx.ellipse(0, -36, 13, 7, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#18283d';
+        ctx.beginPath();
+        ctx.arc(faceX, -31, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(isPlayer ? 28 : -28, -7);
+        ctx.rotate((isPlayer ? 1 : -1) * (.18 + armSwing));
+        ctx.strokeStyle = '#dfecf4';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(isPlayer ? 12 : -12, -15, 9, 15, .28, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#b7dbed';
+        ctx.lineWidth = 1;
+        for (let string = -4; string <= 4; string += 4) {
+            ctx.beginPath();
+            ctx.moveTo((isPlayer ? 12 : -12) + string, -28);
+            ctx.lineTo((isPlayer ? 12 : -12) + string, -2);
+            ctx.moveTo(isPlayer ? 3 : -21, -15 + string);
+            ctx.lineTo(isPlayer ? 21 : -3, -15 + string);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#edc785';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(isPlayer ? 19 : -19, -3);
+        ctx.lineTo(isPlayer ? 25 : -25, 6);
+        ctx.stroke();
+        ctx.restore();
+        ctx.restore();
+    }
+
+    function drawBall() {
+        const projectedY = ball.y - ball.z * .53;
+        for (let i = 0; i < ball.trail.length; i += 1) {
+            const trail = ball.trail[i];
+            ctx.globalAlpha = (i / ball.trail.length) * .34;
+            ctx.fillStyle = '#f3ff48';
+            ctx.beginPath();
+            ctx.arc(trail.x, trail.y - trail.z * .53, 2 + i * .35, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#001b3066';
+        ctx.beginPath();
+        ctx.ellipse(ball.x + 4, ball.y + 3, 8, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = '#f0ff52';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = '#f2ff46';
+        ctx.beginPath();
+        ctx.arc(ball.x, projectedY, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fffed1';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(ball.x, projectedY, 5, -.8, .8);
+        ctx.stroke();
+    }
+
+    function draw(timestamp) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(renderScale, 0, 0, renderScale, renderOffsetX, renderOffsetY);
+        const guestView = gameMode === 'online' && onlineRoom?.player_index === 1;
+        if (guestView) {
+            ctx.translate(WIDTH, 0);
+            ctx.scale(-1, 1);
+        }
+        drawScenery();
+        drawCourt();
+        drawPlayer(rival, 'rival', timestamp);
+        drawPlayer(player, 'player', timestamp);
+        if (ball.live || running) drawBall();
+        if (guestView) {
+            ctx.setTransform(renderScale, 0, 0, renderScale, renderOffsetX, renderOffsetY);
+        }
+
+        if (messageTimer > 0) {
+            ctx.fillStyle = '#031528a6';
+            roundedRect(430, 316, 340, 82, 18);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = '900 31px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(gameMessage, 600, 358);
+        }
+
+        if (!running && !finished) {
+            ctx.fillStyle = '#06182d4d';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            ctx.fillStyle = '#fff';
+            ctx.font = '800 25px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('TU CANCHA TE ESPERA', WIDTH / 2, HEIGHT / 2 - 8);
+            ctx.fillStyle = '#d0e6f5';
+            ctx.font = '600 14px Montserrat, sans-serif';
+            ctx.fillText('Pulsa «Iniciar partida» para comenzar', WIDTH / 2, HEIGHT / 2 + 22);
+        } else if (!running && finished) {
+            ctx.fillStyle = '#06182d4d';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            ctx.fillStyle = '#fff';
+            ctx.font = '900 34px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(sets[0] > sets[1] ? '¡VICTORIA!' : 'PARTIDO TERMINADO', WIDTH / 2, HEIGHT / 2);
+        }
+    }
+
+    function loop(timestamp) {
+        const dt = Math.min(.035, lastFrame ? (timestamp - lastFrame) / 1000 : 0);
+        lastFrame = timestamp;
+        update(dt);
+        draw(timestamp);
+        animationFrameId = window.requestAnimationFrame(loop);
+    }
+
+    startButton.addEventListener('click', async () => {
+        if (finished) {
+            resetMatch(false);
+        }
+        if (!started && gameMode === 'solo' && loggedIn) {
+            startButton.disabled = true;
+            showStatus('Validando partida…');
+            try {
+                await startValidatedMatch();
+            } catch (error) {
+                message.textContent = error.message;
+                showStatus('No se pudo iniciar la partida');
+                startButton.disabled = false;
+                return;
+            }
+            startButton.disabled = false;
+        }
+        running = true;
+        pauseButton.disabled = false;
+        startButton.textContent = '▶ En juego';
+        if (!started) {
+            started = true;
+            matchStartedAt = Date.now();
+            positionServe();
+        }
+        showStatus(ball.live ? '¡Pelota en juego!' : serving === 'player' ? 'Tu saque · pulsa ESPACIO o GOLPEAR' : 'El rival prepara el saque');
+    });
+
+    pauseButton.addEventListener('click', () => {
+        if (!running || finished) return;
+        running = false;
+        pauseButton.disabled = true;
+        startButton.textContent = '▶ Continuar';
+        showStatus('Partida en pausa');
+    });
+
+    document.getElementById('arenaResetButton').addEventListener('click', () => {
+        if (gameMode === 'online' && onlineRoom?.player_index === 1) return;
+        resetMatch(false);
+        startButton.click();
+    });
+    document.getElementById('arenaTouchHit').addEventListener('click', () => {
+        if (gameMode === 'online' && onlineRoom?.player_index === 1) remoteHitPending = true;
+        else hitBall('player');
+    });
+    const touchRun = document.getElementById('arenaTouchRun');
+    touchRun.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        runInput = true;
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
+        touchRun.addEventListener(eventName, () => { runInput = false; });
+    });
+    canvas.addEventListener('pointermove', (event) => {
+        if (event.pointerType !== 'mouse') return;
+        const rect = canvas.getBoundingClientRect();
+        const pixelX = (event.clientX - rect.left) * canvas.width / rect.width;
+        const pixelY = (event.clientY - rect.top) * canvas.height / rect.height;
+        input.mouseTarget = {
+            x: gameMode === 'online' && onlineRoom?.player_index === 1
+                ? WIDTH - (pixelX - renderOffsetX) / renderScale
+                : (pixelX - renderOffsetX) / renderScale,
+            y: (pixelY - renderOffsetY) / renderScale
+        };
+    });
+    canvas.addEventListener('pointerleave', () => { input.mouseTarget = null; });
+    canvas.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'mouse') {
+            canvas.focus();
+            if (gameMode === 'online' && onlineRoom?.player_index === 1) remoteHitPending = true;
+            else hitBall('player');
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (!document.getElementById('tennis-arena-game').contains(document.activeElement)) return;
+        if (event.target instanceof HTMLElement && event.target.matches('input, select, textarea')) return;
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault();
+        keys.add(event.code);
+        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') runInput = true;
+        if (event.code === 'Space' && !event.repeat) {
+            if (gameMode === 'online' && onlineRoom?.player_index === 1) remoteHitPending = true;
+            else hitBall('player');
+        }
+        if (event.code === 'Escape' && running) pauseButton.click();
+    });
+    document.addEventListener('keyup', (event) => {
+        keys.delete(event.code);
+        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') runInput = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    });
+    window.addEventListener('blur', () => {
+        keys.clear();
+        input.mouseTarget = null;
+        input.x = 0;
+        input.y = 0;
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+    });
+
+    function updateJoystick(event) {
+        const rect = joystick.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const limit = Math.min(rect.width, rect.height) * .31;
+        const dx = event.clientX - centerX;
+        const dy = event.clientY - centerY;
+        const distance = Math.hypot(dx, dy);
+        const factor = distance > limit ? limit / distance : 1;
+        const knobX = dx * factor;
+        const knobY = dy * factor;
+        input.x = knobX / limit;
+        input.y = knobY / limit;
+        joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+    }
+
+    joystick.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        input.pointer = event.pointerId;
+        joystick.setPointerCapture(event.pointerId);
+        updateJoystick(event);
+    });
+    joystick.addEventListener('pointermove', (event) => {
+        if (event.pointerId === input.pointer) updateJoystick(event);
+    });
+    const releaseJoystick = (event) => {
+        if (event.pointerId !== input.pointer) return;
+        input.pointer = null;
+        input.x = 0;
+        input.y = 0;
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+    };
+    joystick.addEventListener('pointerup', releaseJoystick);
+    joystick.addEventListener('pointercancel', releaseJoystick);
+
+    document.querySelectorAll('[data-arena-tab]').forEach((button) => {
+        button.addEventListener('click', () => showArenaPanel(button.dataset.arenaTab));
+    });
+    document.querySelectorAll('[data-arena-back]').forEach((button) => {
+        button.addEventListener('click', () => showArenaPanel('play'));
+    });
+    document.querySelectorAll('[data-arena-mode]').forEach((button) => {
+        button.addEventListener('click', () => {
+            selectedMode = button.dataset.arenaMode;
+            document.querySelectorAll('[data-arena-mode]').forEach((modeButton) => {
+                modeButton.setAttribute('aria-pressed', String(modeButton === button));
+            });
+        });
+    });
+
+    function startArenaMode(mode) {
+        if (!['solo', 'local', 'training', 'tournament'].includes(mode)) throw new Error('El modo de juego no es válido.');
+        if (onlineRoom) leaveOnlineRoom();
+        gameMode = mode;
+        selectedMode = mode;
+        matchSetsToWin = mode === 'tournament' ? 1 : mode === 'training' ? Number.MAX_SAFE_INTEGER : profile.preferences.format === 'one' ? 1 : 2;
+        updateModeLabels();
+        resetMatch(false);
+        showArenaPanel('play');
+        startButton.click();
+        canvas.focus();
+    }
+
+    document.getElementById('arenaModeStart').addEventListener('click', () => {
+        startArenaMode(selectedMode);
+    });
+    document.getElementById('arenaApplySettings').addEventListener('click', () => {
+        difficulty = document.getElementById('arenaDifficulty').value;
+        profile.preferences.difficulty = difficulty;
+        profile.preferences.format = document.getElementById('arenaMatchFormat').value;
+        matchSetsToWin = profile.preferences.format === 'one' ? 1 : 2;
+        saveProfile();
+        startArenaMode(['local', 'training'].includes(gameMode) ? gameMode : 'solo');
+    });
+
+    document.getElementById('arenaTournamentStart').addEventListener('click', () => {
+        if (!profile.tournament.active || profile.tournament.round < 1) {
+            profile.tournament = { active: true, round: 1 };
+        }
+        document.getElementById('arenaTournamentStatus').textContent =
+            `Ronda ${profile.tournament.round} de 3 · partido contra rival de IA`;
+        saveProfile();
+        startArenaMode('tournament');
+    });
+
+    document.getElementById('arenaPlayAgain').addEventListener('click', () => {
+        resetMatch(false);
+        startButton.click();
+        canvas.focus();
+    });
+    document.getElementById('arenaResultMenu').addEventListener('click', () => {
+        document.getElementById('arenaResultOverlay').hidden = true;
+        showArenaPanel('play');
+    });
+
+    document.getElementById('arenaSaveProfile').addEventListener('click', () => {
+        const name = document.getElementById('arenaPlayerName').value.trim().replace(/\s+/g, ' ');
+        if (!name) {
+            document.getElementById('arenaOnlineMessage').textContent = 'Escribe un nombre antes de guardar tu perfil.';
+            return;
+        }
+        profile.name = name.slice(0, 18);
+        saveProfile();
+        updateModeLabels();
+        renderProfile();
+    });
+
+    const preferenceElements = {
+        difficulty: document.getElementById('arenaDifficulty'),
+        format: document.getElementById('arenaMatchFormat'),
+        volume: document.getElementById('arenaVolume'),
+        music: document.getElementById('arenaMusic'),
+        quality: document.getElementById('arenaQuality')
+    };
+
+    function loadPreferencesIntoControls() {
+        preferenceElements.difficulty.value = difficulty;
+        preferenceElements.format.value = profile.preferences.format === 'one' ? 'one' : 'three';
+        preferenceElements.volume.value = Math.max(0, Math.min(100, Number(profile.preferences.volume) || 0));
+        preferenceElements.music.value = profile.preferences.music === 'on' ? 'on' : 'off';
+        preferenceElements.quality.value = ['high', 'balanced', 'low'].includes(profile.preferences.quality)
+            ? profile.preferences.quality : 'high';
+    }
+
+    function configureMusic() {
+        window.clearInterval(musicTimer);
+        musicTimer = 0;
+        if (profile.preferences.music !== 'on') return;
+        const notes = [196, 246.94, 293.66, 246.94, 220, 261.63, 329.63, 261.63];
+        let noteIndex = 0;
+        musicTimer = window.setInterval(() => {
+            if (document.visibilityState === 'visible') playSound(notes[noteIndex++ % notes.length], .2);
+        }, 850);
+    }
+
+    function savePreference(name, value) {
+        profile.preferences[name] = value;
+        saveProfile();
+        configureMusic();
+        if (name === 'difficulty') {
+            difficulty = value;
+            updateModeLabels();
+        }
+        if (name === 'format') matchSetsToWin = value === 'one' ? 1 : 2;
+        if (name === 'quality') resizeCanvas();
+    }
+
+    preferenceElements.difficulty.addEventListener('change', () => savePreference('difficulty', preferenceElements.difficulty.value));
+    preferenceElements.format.addEventListener('change', () => savePreference('format', preferenceElements.format.value));
+    preferenceElements.volume.addEventListener('input', () => savePreference('volume', Number(preferenceElements.volume.value)));
+    preferenceElements.music.addEventListener('change', () => savePreference('music', preferenceElements.music.value));
+    preferenceElements.quality.addEventListener('change', () => savePreference('quality', preferenceElements.quality.value));
+    document.getElementById('arenaResetPreferences').addEventListener('click', () => {
+        profile.preferences = { ...defaultProfile.preferences };
+        difficulty = 'normal';
+        loadPreferencesIntoControls();
+        saveProfile();
+        updateModeLabels();
+        resizeCanvas();
+    });
+
+    document.getElementById('arenaCreateRoom').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+            const response = await fetch(gameRoot.dataset.onlineCreateUrl, onlineRequestOptions({}));
+            const room = await checkOnlineResponse(response);
+            setOnlineRoom(room);
+        } catch (error) {
+            document.getElementById('arenaOnlineMessage').textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+    document.getElementById('arenaJoinRoom').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const code = document.getElementById('arenaRoomCode').value.trim().toUpperCase();
+        button.disabled = true;
+        try {
+            const response = await fetch(gameRoot.dataset.onlineJoinUrl, onlineRequestOptions({ code }));
+            const room = await checkOnlineResponse(response);
+            setOnlineRoom(room);
+        } catch (error) {
+            document.getElementById('arenaOnlineMessage').textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    function leaveOnlineRoom(skipServerRequest = false) {
+        const roomToLeave = onlineRoom;
+        onlineSessionGeneration += 1;
+        onlineRequestPending = false;
+        window.clearInterval(onlinePollTimer);
+        onlinePollTimer = 0;
+        onlineRoom = null;
+        sessionStorage.removeItem('tennisArenaOnlineRoom');
+        sessionStorage.removeItem('tennisArenaHostState');
+        if (roomToLeave && !skipServerRequest) {
+            fetch(gameRoot.dataset.onlineLeaveUrl, onlineRequestOptions({
+                room_id: roomToLeave.room_id,
+                token: roomToLeave.token
+            }))
+                .then(checkOnlineResponse)
+                .catch((error) => {
+                    document.getElementById('arenaOnlineMessage').textContent =
+                        `Saliste de la sala localmente; el servidor informó: ${error.message}`;
+                });
+        }
+        gameMode = 'solo';
+        running = false;
+        resetMatch(false);
+        updateModeLabels();
+        startButton.disabled = false;
+        document.getElementById('arenaCreateRoom').hidden = false;
+        document.getElementById('arenaJoinRoom').hidden = false;
+        document.getElementById('arenaLeaveRoom').hidden = true;
+        document.getElementById('arenaConnectionStatus').className = 'arena-connection';
+        document.getElementById('arenaConnectionStatus').textContent = 'Sin conexión online';
+        document.getElementById('arenaOnlineMessage').textContent = 'Saliste de la sala.';
+    }
+
+    document.getElementById('arenaLeaveRoom').addEventListener('click', leaveOnlineRoom);
+    document.getElementById('arenaDifficulty').value = difficulty;
+    loadPreferencesIntoControls();
+    renderProfile();
+    updateModeLabels();
+    configureMusic();
+    if (profile.tournament.active && profile.tournament.round > 0) {
+        document.getElementById('arenaTournamentStatus').textContent =
+            `Ronda ${profile.tournament.round} de 3 lista para jugar.`;
+    }
+    try {
+        const savedRoom = JSON.parse(sessionStorage.getItem('tennisArenaOnlineRoom') || 'null');
+        if (savedRoom && typeof savedRoom.room_id === 'string' && typeof savedRoom.token === 'string' &&
+            [0, 1].includes(savedRoom.player_index)) {
+            setOnlineRoom(savedRoom);
+            const savedState = JSON.parse(sessionStorage.getItem('tennisArenaHostState') || 'null');
+            if (savedRoom.player_index === 0 && savedState && !savedState.finished) {
+                applyOnlineMatch(savedState);
+                document.getElementById('arenaOnlineMessage').textContent =
+                    `Sala ${savedRoom.code} restaurada. Comparte el código para que se una tu rival.`;
+            }
+        } else {
+            sessionStorage.removeItem('tennisArenaOnlineRoom');
+            sessionStorage.removeItem('tennisArenaHostState');
+        }
+    } catch (error) {
+        console.error('No se pudo restaurar la sala online de Tennis Arena.', error);
+        document.getElementById('arenaOnlineMessage').textContent =
+            'No se pudo restaurar la sala online guardada. Puedes crear o unirte a otra sala.';
+        sessionStorage.removeItem('tennisArenaOnlineRoom');
+        sessionStorage.removeItem('tennisArenaHostState');
+    }
+
+    if ('ResizeObserver' in window) {
+        new ResizeObserver(resizeCanvas).observe(canvas);
+    } else {
+        window.addEventListener('resize', resizeCanvas);
+    }
+    resizeCanvas();
+    updateScore();
+    positionServe();
+    if (!animationFrameId) animationFrameId = window.requestAnimationFrame(loop);
+})();
+</script>
+{% if not standalone_game %}
+<script
+    src="{{ url_for('static', filename='JS/juegos.js', v='20261025-premium-3d') }}"
+    data-progress-url="{{ url_for('api_recompensas_juego') }}"
+    data-claim-url="{{ url_for('api_girar_ruleta_juego') }}"
+    data-challenge-claim-url="{{ url_for('api_reclamar_desafio_juego') }}"
+    defer></script>
+{% endif %}
+{% include 'footer.html' ignore missing %}
+</body>
+</html>

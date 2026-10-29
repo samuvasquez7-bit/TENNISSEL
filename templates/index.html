@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TENNISSEL | Tenis en Colombia: canchas, jugadores, torneos y tienda</title>
+    <meta name="description" content="Encuentra canchas de tenis en Colombia, conecta con jugadores y profesores, descubre torneos y compra equipo en TENNISSEL, la comunidad para vivir el tenis.">
+    <meta name="keywords" content="tenis en Colombia, canchas de tenis, jugadores de tenis, profesores de tenis, torneos de tenis, tienda de tenis, comunidad de tenis, TENNISSEL">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="TENNISSEL">
+    <meta name="theme-color" content="#07110b">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='IMG/favicon.png', v='20261028-2') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='IMG/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='IMG/favicon-16.png') }}">
+    <link rel="canonical" href="{{ request.url_root|trim('/') }}/">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:site_name" content="TENNISSEL">
+    <meta property="og:url" content="{{ request.url_root|trim('/') }}/">
+    <meta property="og:title" content="TENNISSEL | Encuentra tu lugar en el tenis colombiano">
+    <meta property="og:description" content="Explora canchas, conoce jugadores y profesores, encuentra torneos y descubre productos para jugar tenis en Colombia.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ url_for('static', filename='IMG/tennissel-canchas-y-mapas.jpg', _external=True) }}">
+    <meta property="og:image:alt" content="Canchas de tenis y mapas en TENNISSEL">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="800">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TENNISSEL | Tenis en Colombia">
+    <meta name="twitter:description" content="Canchas, jugadores, profesores, torneos y productos de tenis en un solo lugar.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='IMG/tennissel-canchas-y-mapas.jpg', _external=True) }}">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": {{ (request.url_root|trim('/') ~ '/#organization')|tojson }},
+          "name": "TENNISSEL",
+          "url": {{ (request.url_root|trim('/') ~ '/')|tojson }},
+          "description": "Comunidad de tenis en Colombia para encontrar canchas, jugadores, profesores, torneos y productos.",
+          "sameAs": [
+            "https://instagram.com/tennissel.nuestr0saber?vrfl=Yno5cXppMDZrZW4y",
+            "https://x.com/tennisseltennis?s=11"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": {{ (request.url_root|trim('/') ~ '/#website')|tojson }},
+          "name": "TENNISSEL",
+          "url": {{ (request.url_root|trim('/') ~ '/')|tojson }},
+          "description": "Comunidad de tenis en Colombia para encontrar canchas, jugadores, profesores, torneos y productos.",
+          "inLanguage": "es-CO",
+          "publisher": {"@id": {{ (request.url_root|trim('/') ~ '/#organization')|tojson }}},
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {{ (request.url_root|trim('/') ~ '/productos?q={search_term_string}')|tojson }},
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Cambia tu etiqueta link por esta: -->
+</head>
+<body>
+
+{% include 'navbar.html' %}
+
+{% if not session.get('user_id') %}
+    {% include 'cookie_banner.html' %}
+{% endif %}
+
+
+    <!-- =======================================================================
+       2. CONTENIDO PRINCIPAL
+       ======================================================================= -->
+    <main class="index-body">
+        
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--                         SECCIÓN HERO                              -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <section class="index-hero" aria-labelledby="home-title">
+            <div class="index-hero-content">
+                <span class="home-hero-eyebrow"><span aria-hidden="true"></span> EL ECOSISTEMA DEL TENIS EN COLOMBIA</span>
+                <h1 class="index-hero-title" id="home-title">TENNISSEL</h1>
+                <p>
+                    TENNISSEL conecta a la comunidad del tenis en Colombia. Encuentra canchas, jugadores, torneos, servicios y productos en un solo lugar.
+                </p>
+                <div class="index-hero-buttons">
+                    <a href="#explore-platform" class="btn-tennissel">Explorar la plataforma <span aria-hidden="true">→</span></a>
+                    <a href="{{ url_for('productos') }}" class="btn-tennissel-outline">Ver catálogo</a>
+                    {% if not usuario_autenticado %}
+                        <a href="{{ url_for('registro') }}" class="btn-tennissel-text">Crear cuenta <span aria-hidden="true">↗</span></a>
+                    {% endif %}
+                </div>
+                <div class="home-hero-proof">
+                    <span class="home-proof-ball" aria-hidden="true"></span>
+                    <span>JUGADORES · CANCHAS · COMUNIDAD</span>
+                </div>
+            </div>
+            <div class="home-hero-scene" aria-hidden="true">
+                <img src="{{ url_for('static', filename='IMG/TENNISSEL_MATCHMAKING.png') }}"
+                     alt=""
+                     width="1024"
+                     height="1024"
+                     fetchpriority="high">
+                <span class="home-scene-vignette"></span>
+                <span class="home-scene-label">ENCUENTRA TU LUGAR EN LA CANCHA</span>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--                      FIN SECCIÓN HERO                               -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+        <nav class="home-shortcuts" aria-label="Accesos rápidos">
+            <a href="{{ url_for('mapas') }}" class="home-shortcut">
+                <span class="home-shortcut-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>
+                <span><strong>Mapas</strong><small>Encuentra una cancha</small></span>
+                <span class="home-shortcut-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a href="{{ url_for('matchmaking') }}" class="home-shortcut">
+                <span class="home-shortcut-icon" aria-hidden="true"><i class="fa-solid fa-people-arrows-left-right"></i></span>
+                <span><strong>Matchmaking</strong><small>Conecta con jugadores</small></span>
+                <span class="home-shortcut-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a href="{{ url_for('informacion_torneos') }}" class="home-shortcut">
+                <span class="home-shortcut-icon" aria-hidden="true"><i class="fa-solid fa-trophy"></i></span>
+                <span><strong>Torneos</strong><small>Explora el circuito</small></span>
+                <span class="home-shortcut-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a href="{{ url_for('reservas') }}" class="home-shortcut">
+                <span class="home-shortcut-icon" aria-hidden="true"><i class="fa-regular fa-calendar-check"></i></span>
+                <span><strong>Reservas</strong><small>Organiza tu partido</small></span>
+                <span class="home-shortcut-arrow" aria-hidden="true">↗</span>
+            </a>
+        </nav>
+        
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!--                  SECCIÓN DE EXPLORACIÓN (FEATURES)                   -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="explore-section" id="explore-platform">
+
+    <h2 class="explore-title">
+        EXPLORA LA <span>PLATAFORMA</span>
+    </h2>
+
+    <div class="explore-grid">
+
+        {% if not is_premium %}
+        <div class="explore-card">
+            <span class="explore-icon">⚡</span>
+            <h3>Entrenamiento Élite</h3>
+            <p>
+                Accede a guías detalladas, análisis de golpes tácticos y rutinas
+                de agilidad preparadas para jugadores que buscan evolucionar
+                rápido.
+            </p>
+            <a href="/entreno" class="explore-link">
+                Ver entrenamientos →
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="explore-card">
+            <span class="explore-icon">💎</span>
+            <h3>Suscripción Premium</h3>
+            <p>
+                {% if is_premium %}
+                Tu plan Premium está activo. Consulta el plan que compraste y su comprobante de activación.
+                {% else %}
+                Desbloquea asesoramiento personalizado, contenido audiovisual
+                exclusivo de técnicas de tenis y ofertas especiales antes que
+                nadie.
+                {% endif %}
+            </p>
+            <a href="/premium" class="explore-link">
+                {% if is_premium %}Ver mi Premium y comprobante →{% else %}Hacerse Premium →{% endif %}
+            </a>
+        </div>
+
+        <div class="explore-card">
+            <span class="explore-icon">🎾</span>
+            <h3>Raquetas y Más</h3>
+            <p>
+                Descubre nuestra línea complementaria de raquetas de alta gama,
+                encordados de precisión y maletines deportivos para proteger tu
+                equipo.
+            </p>
+            <a href="/productos" class="explore-link">
+                Ver equipo →
+            </a>
+        </div>
+
+        <div class="explore-card">
+            <span class="explore-icon">🤝</span>
+            <h3>Soporte Técnico</h3>
+            <p>
+                ¿Tienes dudas sobre tu calzado, compras o suscripción? Nuestro
+                equipo de expertos está disponible 24/7 para resolver tus
+                inquietudes.
+            </p>
+<a href="{{ url_for('soporte_tecnico') }}" class="explore-link">
+    Centro de ayuda →
+</a>
+        </div>
+
+    </div>
+
+</section>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--              FIN SECCIÓN DE EXPLORACIÓN                             -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+<!--                  SECCIÓN VIDEO Y BENEFICIOS                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="index-video-features">
+    
+    <h2 class="index-features-title">BENEFICIOS DE <span>VIVIR EL TENIS</span></h2>
+    
+    <div class="index-video-layout">
+        <!-- Columna Izquierdo: Video -->
+        <div class="index-video-box">
+            <div class="video-embed-wrapper">
+                <video autoplay loop muted playsinline preload="none" data-lazy-video>
+                    <source data-src="{{ url_for('static', filename='IMG/TENISSALUDABLE.mp4') }}" type="video/mp4">
+                    Tu navegador no soporta el elemento de video.
+                </video>
+            </div>
+        </div>
+        
+        <!-- Columna Derecho: Beneficios -->
+        <div class="index-info-box">
+            <h3>¿Por qué jugar Tenis?</h3>
+            <p class="info-intro">
+                El tenis es considerado uno de los deportes más completos del mundo, 
+                combinando exigencia física, agilidad mental y disciplina táctica.
+            </p>
+            
+            <ul class="beneficios-lista">
+                <li>
+                    <div class="beneficio-card">
+                        <span class="beneficio-icono">❤️</span>
+                        <div class="beneficio-text">
+                            <strong>Salud Cardiovascular:</strong> Mejora la resistencia, quema calorías y fortalece el corazón con entrenamientos de intervalos de alta intensidad (HIIT) naturales del juego.
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="beneficio-card">
+                        <span class="beneficio-icono">🧠</span>
+                        <div class="beneficio-text">
+                            <strong>Enfoque y Agilidad Mental:</strong> Obliga a tomar decisiones en fracciones de segundo, mejorando la concentración, la paciencia y la gestión del estrés bajo presión.
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="beneficio-card">
+                        <span class="beneficio-icono">💪</span>
+                        <div class="beneficio-text">
+                            <strong>Coordinación y Tonificación:</strong> Desarrolla la velocidad lateral, el equilibrio y fortalece tanto el tren superior como el inferior en cada golpe.
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+    </div>
+</section>
+
+            <!-- ═══════════════════════════════════════════════════════════════════ -->
+<!--                  SERVICIO PREMIUN                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<section class="premium-section">
+
+    <div class="premium-header">
+        <span class="premium-tag">EXPERIENCIA PREMIUM</span>
+        <h2>Servicios Premium</h2>
+        <p>
+            Lleva tu experiencia deportiva al siguiente nivel con herramientas
+            exclusivas diseñadas para jugadores de TENNISSEL.
+        </p>
+    </div>
+
+    <div class="premium-cards">
+
+        <!-- MAPAS -->
+        <div class="premium-card">
+            <img src="{{ url_for('static', filename='IMG/tennissel-canchas-y-mapas.jpg') }}" alt="Mapas y reservas de canchas" width="640" height="360" loading="lazy" decoding="async">
+
+            <div class="card-content">
+                <h3>Mapas</h3>
+
+                <p>
+                    Encuentra canchas cercanas, conoce su ubicación y descubre
+                    nuevos lugares para jugar donde quieras.
+                </p>
+
+                <a href="{{ url_for('mapas') }}">Explorar</a>
+            </div>
+        </div>
+
+        <!-- MATCHMAKING -->
+        <div class="premium-card">
+            <img src="{{ url_for('static', filename='IMG/TENNISSEL_MATCHMAKING.png') }}" alt="Matchmaking para jugadores de tenis" width="640" height="360" loading="lazy" decoding="async">
+
+            <div class="card-content">
+                <h3>Matchmaking</h3>
+
+                <p>
+                    Encuentra rivales o compañeros con un nivel similar para
+                    disfrutar partidos competitivos y equilibrados.
+                </p>
+
+                <a href="{{ url_for('matchmaking') }}">Encontrar jugadores</a>
+            </div>
+        </div>
+
+        <!-- RESERVAS -->
+        <div class="premium-card">
+            <img src="{{ url_for('static', filename='IMG/TENNISSEL_RESERVAS.png') }}" alt="Reservas de canchas de tenis" width="640" height="360" loading="lazy" decoding="async">
+
+            <div class="card-content">
+                <h3>Reservas</h3>
+
+                <p>
+                    Reserva canchas en segundos, administra horarios y organiza
+                    tus encuentros desde un solo lugar.
+                </p>
+
+                <a href="{{ url_for('reservas') }}">Reservar ahora</a>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+        
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--           SECCIÓN CENTRO DE INFORMACIÓN TENIS                     -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <section id="informacion" class="index-features">
+            <h2 class="index-features-title">🎾 CENTRO DE <span>INFORMACIÓN TENIS</span></h2>
+            
+            <div class="index-features-grid">
+                
+                <!-- Tarjeta 1: ATP y WTA -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">💥</span>
+                    <h3>ATP Y WTA</h3>
+                    <p>Conoce todo sobre la ATP y la WTA, las organizaciones que reúnen a los mejores tenistas del mundo. Explora rankings oficiales, calendarios de torneos, estadísticas, resultados y las últimas novedades del circuito profesional masculino y femenino.</p>
+                    <a href="/informacion/atp_wta" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 2: Torneos -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">🏆</span>
+                    <h3>Torneos</h3>
+                    <p>Descubre los próximos torneos y eventos amateur organizados por TENNISSEL. Participa en diferentes categorías, demuestra tu talento en la cancha, suma puntos para el ranking oficial y compite por premios exclusivos en cada partido.</p>
+                    <a href="/informacion/torneos" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 3: Jugadores -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">🥇</span>
+                    <h3>Jugadores</h3>
+                    <p>Accede a estadísticas actualizadas, posiciones en el ranking mundial, títulos obtenidos y datos relevantes de cada jugador del circuito profesional.</p>
+                    <a href="/informacion/jugadores" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 4: Partidos -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">🎾</span>
+                    <h3>Partidos Recientes</h3>
+                    <p>No te pierdas ningún detalle de los encuentros más recientes y conoce cómo evolucionan las principales competiciones del circuito internacional.</p>
+                    <a href="/informacion/partidos_recientes" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 5: Datos y Tips -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">😉</span>
+                    <h3>Datos y Tips</h3>
+                    <p>Explora estadísticas relevantes, hábitos de entrenamiento y recomendaciones utilizadas por jugadores y entrenadores para optimizar el rendimiento.</p>
+                    <a href="/informacion/datos_y_tips" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 6: Noticias Semanales -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">📰</span>
+                    <h3>Noticias Semanales</h3>
+                    <p>Accede a las últimas novedades, resultados destacados, cambios en los rankings y acontecimientos que están marcando el presente del tenis profesional a nivel mundial.</p>
+                    <a href="/informacion/noticias_semanales" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 7: Noticias Último Momento -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">📢</span>
+                    <h3>Noticias De Último Momento</h3>
+                    <p>Mantente informado con las novedades más recientes, resultados de última hora, cambios en los rankings, lesiones, fichajes de entrenadores y acontecimientos que impactan al circuito profesional.</p>
+                    <a href="/informacion/noticias_new" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 8: Marcas -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">🚀</span>
+                    <h3>Marca de Útiles y Lanzamiento</h3>
+                    <p>Mantente al día con las últimas innovaciones en raquetas, calzado, accesorios y tecnología deportiva desarrolladas por las marcas más reconocidas del mercado para maximizar el rendimiento en la cancha.</p>
+                    <a href="/informacion/marcas_y_utiles" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+                <!-- Tarjeta 9: Sitios para Ver Tenis -->
+                <div class="index-feature-card">
+                    <span class="index-card-icon">📺</span>
+                    <h3>Sitios para Ver Tenis</h3>
+                    <p>Descubre dónde seguir partidos en tiempo real, revivir encuentros históricos y acceder a contenido exclusivo de los principales circuitos y competiciones del tenis mundial.</p>
+                    <a href="/informacion/sitios_tennis" class="index-card-link">Centro de ayuda →</a>
+                </div>
+                
+            </div>
+             <!-- ═══════════════════════════════════════════════════════════════════ -->
+             <!--                         SECCIÓN QUIÉNES SOMOS                     -->
+             <!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="¿quienes-somos?" class="quienes-wrapper">
+
+    <div class="quienes-somos-section" id="quienes-somos">
+
+        <!-- Encabezado -->
+        <div class="quienes-header">
+
+            <h2 class="quienes-title">QUIÉNES SOMOS</h2>
+
+            <p class="quienes-subtitle">
+                En <strong>TENNISSEL</strong> no somos una simple tienda ni
+                gestionamos infraestructura física de manera directa.
+
+                Somos la plataforma integral líder, el punto de encuentro
+                definitivo y el conector estratégico diseñado para centralizar
+                las soluciones de la comunidad tenista y los entusiastas del
+                deporte blanco.
+
+                <br><br>
+
+                Nacemos como respuesta a la excesiva dispersión de información
+                técnica, escenarios deportivos y recursos en el sector amateur.
+
+                Tradicionalmente, los jugadores, entrenadores independientes y
+                comercios locales han dependido de múltiples herramientas
+                ineficientes que limitan su autonomía y experiencia.
+
+                Nosotros rompemos esa barrera actuando como un HUB tecnológico
+                que unifica todo el ecosistema en un solo lugar.
+            </p>
+
+        </div>
+
+        <!-- Video -->
+        <div class="quienes-video-wrapper">
+
+            <video autoplay loop muted playsinline preload="none" data-lazy-video>
+                <source data-src="{{ url_for('static', filename='IMG/TENNISSELNOSOTROS.mp4') }}" type="video/mp4">
+                Tu navegador no soporta el elemento de video.
+            </video>
+
+        </div>
+
+        <!-- Tarjetas -->
+        <div class="quienes-grid">
+
+            <div class="quienes-card">
+                <div class="card-icon">📍</div>
+
+                <h3>Conectar la cancha</h3>
+
+                <p>
+                    Localiza en tiempo real escenarios, tiendas especializadas y
+                    los mejores sitios para disfrutar del circuito profesional
+                    mediante nuestro mapa interactivo.
+                </p>
+            </div>
+
+            <div class="quienes-card">
+                <div class="card-icon">🎾</div>
+
+                <h3>Potenciar el talento</h3>
+
+                <p>
+                    Servimos de puente para que entrenadores independientes
+                    adquieran visibilidad comercial y puedas reservar tus clases
+                    directamente con ellos.
+                </p>
+            </div>
+
+            <div class="quienes-card">
+                <div class="card-icon">⚡</div>
+
+                <h3>Vivir el tenis al minuto</h3>
+
+                <p>
+                    Centralizamos resultados, estadísticas, rankings ATP/WTA y
+                    guías tácticas en tiempo real para que nunca te quedes fuera
+                    del juego profesional.
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Cierre -->
+        <div class="quienes-footer">
+
+            <p>
+                Democratizamos el acceso al deporte blanco.
+                Conectando cada rincón de la cancha con la tecnología que
+                necesitas.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+        <section class="home-reviews" id="resenas" aria-labelledby="home-reviews-title">
+            <div class="home-reviews-heading">
+                <span class="home-reviews-eyebrow">VOCES DE LA CANCHA</span>
+                <h2 id="home-reviews-title">Experiencias de la <span>comunidad</span></h2>
+                <p>Comparte tu experiencia real con TENNISSEL y conoce las opiniones de otros jugadores.</p>
+            </div>
+
+            {% if resenas_disponibles %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <p class="home-review-message home-review-message-{{ category }}" role="status">{{ message }}</p>
+                {% endfor %}
+            {% endwith %}
+            <div class="home-reviews-grid">
+                {% for resena in resenas_sitio %}
+                <article class="home-review-card">
+                    <div class="home-review-topline">
+                        <span class="home-review-avatar" aria-hidden="true">{{ resena.username[:1]|upper }}</span>
+                        <div>
+                            <h3>{{ resena.username }}</h3>
+                            <span class="home-review-location">Miembro de TENNISSEL</span>
+                        </div>
+                    </div>
+                    <span class="home-review-rating-label">Calificación del autor</span>
+                    <div class="home-review-stars" role="img" aria-label="Calificación del autor: {{ resena.calificacion }} de 5 estrellas">
+                        {{ '★' * resena.calificacion }}{{ '☆' * (5 - resena.calificacion) }}
+                    </div>
+                    <blockquote>{{ resena.comentario }}</blockquote>
+                    <p class="home-review-community-rating">
+                        {% if resena.total_valoraciones %}
+                            Voto de la comunidad:
+                            <strong>{{ '%.1f'|format(resena.promedio_comunidad|float) }}/5</strong>
+                            · {{ resena.total_valoraciones }} {{ 'voto' if resena.total_valoraciones == 1 else 'votos' }}
+                        {% else %}
+                            La comunidad aún no ha calificado esta reseña
+                        {% endif %}
+                    </p>
+                    {% if usuario_autenticado and session.get('user_id')|int != resena.usuario_id|int %}
+                    <form class="home-review-vote-form" method="post" action="{{ url_for('calificar_resena', resena_id=resena.id) }}">
+                        <fieldset class="home-review-vote-field">
+                            <legend>
+                            {{ 'Tu calificación' if resena.mi_valoracion else 'Califica esta reseña' }}
+                            </legend>
+                        <div class="home-review-stars-picker" role="radiogroup" aria-label="Elige una calificación de 1 a 5">
+                            {% for rating in range(1, 6) %}
+                            <input id="review-vote-{{ resena.id }}-{{ rating }}" type="radio" name="calificacion" value="{{ rating }}" aria-label="{{ rating }} de 5, {{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}" required {% if resena.mi_valoracion and resena.mi_valoracion == rating %}checked{% endif %}>
+                            <label for="review-vote-{{ resena.id }}-{{ rating }}" title="{{ rating }} de 5: {{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}">
+                                <span class="home-review-rating-value">{{ rating }}</span>
+                                <span class="home-review-rating-star" aria-hidden="true">★</span>
+                                <span class="home-review-rating-name">{{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        </fieldset>
+                        <button type="submit">{{ 'Actualizar voto' if resena.mi_valoracion else 'Enviar calificación' }}</button>
+                    </form>
+                    {% elif usuario_autenticado %}
+                    <p class="home-review-vote-note">Esta es tu reseña; otras personas pueden calificarla.</p>
+                    <form class="home-review-delete-form" method="post" action="{{ url_for('eliminar_resena', resena_id=resena.id) }}" onsubmit="return confirm('¿Eliminar tu reseña? Esta acción no se puede deshacer.');">
+                        <button type="submit"><i class="fa-regular fa-trash-can" aria-hidden="true"></i> Eliminar mi reseña</button>
+                    </form>
+                    {% else %}
+                    <p class="home-review-vote-note">
+                        <a href="{{ url_for('login') }}">Inicia sesión</a> para calificar esta reseña.
+                    </p>
+                    {% endif %}
+                </article>
+                {% else %}
+                <p class="home-reviews-empty">Aún no hay reseñas. Puedes ser la primera persona en compartir su experiencia.</p>
+                {% endfor %}
+            </div>
+
+            <div class="home-review-form-card">
+                <div class="home-review-form-heading">
+                    <span class="home-review-form-icon" aria-hidden="true"><i class="fa-solid fa-pen-to-square"></i></span>
+                    <div>
+                        <span class="home-review-form-eyebrow">TU VOZ CUENTA</span>
+                        <h3>{{ 'Actualiza tu reseña' if resena_usuario else 'Comparte tu experiencia' }}</h3>
+                        <p>Ayuda a otros tenistas a descubrir lo mejor de la comunidad.</p>
+                    </div>
+                </div>
+                {% if usuario_autenticado %}
+                    <form class="home-review-form" method="post" action="{{ url_for('enviar_resena') }}">
+                        <fieldset class="home-review-rating-field">
+                            <legend>¿Cómo calificarías tu experiencia?</legend>
+                            <p class="home-review-rating-help">Elige una opción del 1 (Muy mala) al 5 (Excelente).</p>
+                            <div class="home-review-stars-picker" role="radiogroup" aria-label="Elige una calificación de 1 a 5">
+                                {% for rating in range(1, 6) %}
+                                <input id="review-rating-{{ rating }}" type="radio" name="calificacion" value="{{ rating }}" aria-label="{{ rating }} de 5, {{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}" required {% if resena_usuario and resena_usuario.calificacion == rating %}checked{% endif %}>
+                                <label for="review-rating-{{ rating }}" title="{{ rating }} de 5: {{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}">
+                                    <span class="home-review-rating-value">{{ rating }}</span>
+                                    <span class="home-review-rating-star" aria-hidden="true">★</span>
+                                    <span class="home-review-rating-name">{{ ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'][rating - 1] }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </fieldset>
+                        <div class="home-review-comment-field">
+                            <label for="review-comment">Tu reseña</label>
+                            <span class="home-review-field-hint">Cuéntanos qué te gustó y cómo fue tu experiencia.</span>
+                            <textarea id="review-comment" name="comentario" rows="5" minlength="10" maxlength="1000" required placeholder="Escribe aquí tu experiencia con TENNISSEL...">{{ resena_usuario.comentario if resena_usuario else '' }}</textarea>
+                            <div class="home-review-field-footer">
+                                <span>Entre 10 y 1000 caracteres</span>
+                                <span>Las malas palabras no están permitidas</span>
+                            </div>
+                        </div>
+                        <div class="home-review-form-actions">
+                            <span class="home-review-form-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Tu reseña se publica con tu usuario.</span>
+                            <button type="submit">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                                {{ 'Guardar cambios' if resena_usuario else 'Publicar reseña' }}
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="home-review-signin">
+                        <p>Inicia sesión o crea tu cuenta para compartir una opinión auténtica con la comunidad.</p>
+                        <div>
+                            <a class="home-review-login" href="{{ url_for('login') }}">Iniciar sesión</a>
+                            <a class="home-review-register" href="{{ url_for('registro') }}">Crear cuenta</a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <p class="home-reviews-disclaimer">Las reseñas son escritas por usuarios registrados; no implican que su compra o experiencia haya sido verificada.</p>
+            {% else %}
+            <p class="home-review-unavailable" role="status">Las reseñas no están disponibles en este momento. Inténtalo de nuevo más tarde.</p>
+            {% endif %}
+        </section>
+
+    </main>
+    
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!--                    FIN CONTENIDO PRINCIPAL                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+{% include 'footer.html' %}
+
+
+{% include 'javascript.html' %}
+<script>
+    (() => {
+        const videos = document.querySelectorAll('video[data-lazy-video]');
+        const loadVideo = (video) => {
+            video.querySelectorAll('source[data-src]').forEach((source) => {
+                source.src = source.dataset.src;
+                source.removeAttribute('data-src');
+            });
+            video.load();
+        };
+
+        if (!('IntersectionObserver' in window)) {
+            videos.forEach(loadVideo);
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries, activeObserver) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                loadVideo(entry.target);
+                activeObserver.unobserve(entry.target);
+            });
+        }, { rootMargin: '200px 0px' });
+        videos.forEach((video) => observer.observe(video));
+    })();
+</script>
+</body>
+</html>
